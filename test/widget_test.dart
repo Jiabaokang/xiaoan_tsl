@@ -1,113 +1,572 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:xiaoan_tsl/history_store.dart';
-import 'package:xiaoan_tsl/main.dart';
-import 'package:xiaoan_tsl/translation_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:xiaoan_tsl/app.dart';
+import 'package:xiaoan_tsl/features/translate/app_controller.dart';
+import 'package:xiaoan_tsl/core/database/database_provider.dart';
+import 'package:xiaoan_tsl/core/router/app_router.dart';
+import 'package:xiaoan_tsl/features/history/history_store.dart';
+import 'package:xiaoan_tsl/core/database/local_store.dart';
+import 'package:xiaoan_tsl/services/language/language_detection_provider.dart';
+import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
+import 'package:xiaoan_tsl/services/translation/mlkit_model_service.dart';
+import 'package:xiaoan_tsl/services/translation/translation_service.dart';
+import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
+import 'package:xiaoan_tsl/services/speech/speech_service_provider.dart';
+import 'package:xiaoan_tsl/services/speech/tts_service.dart';
 
-// 组件测试用内存实现，避免 widget 测试的虚拟时钟等待真实磁盘 I/O。
-class _MemoryHistoryStore extends HistoryStore {
-  _MemoryHistoryStore() : super(File('unused'));
+import 'support/test_translation_services.dart';
 
-  List<TranslationRecord> records = [];
+// 模型首次下载失败后可切换为成功，用于验证页面的显式重试。
+class _RetryModels implements TranslationModelService {
+  bool fail = true;
 
   @override
-  Future<List<TranslationRecord>> load() async => List.of(records);
+  Future<bool> isDownloaded(String code) async => !fail;
 
   @override
-  Future<void> save(List<TranslationRecord> value) async {
-    records = List.of(value);
+  Future<void> download(String code, {bool wifiOnly = true}) async {
+    if (fail) throw StateError('下载失败');
+  }
+
+  @override
+  Future<void> delete(String code) async {}
+}
+
+// 内存模型列表用于核对管理页的查询、下载与删除反馈。
+class _ManagedModels implements TranslationModelService {
+  final downloaded = <String>{'en'};
+
+  @override
+  Future<bool> isDownloaded(String code) async => downloaded.contains(code);
+
+  @override
+  Future<void> download(String code, {bool wifiOnly = true}) async {
+    downloaded.add(code);
+  }
+
+  @override
+  Future<void> delete(String code) async {
+    downloaded.remove(code);
   }
 }
 
+// 记录页面朗读与停止操作，不访问设备声音服务。
+class _SpeechRecorder implements SpeechService {
+  final calls = <(String, String)>[];
+  int stops = 0;
+  Completer<void>? pending;
+
+  @override
+  Future<void> speak({required String text, required String languageCode}) {
+    calls.add((text, languageCode));
+    pending = Completer<void>();
+    return pending!.future;
+  }
+
+  @override
+  Future<void> stop() async {
+    stops++;
+    if (pending?.isCompleted == false) pending!.complete();
+  }
+}
+
+// 用于验证设备语音不可用和引擎故障时的页面反馈。
+class _FailingSpeech implements SpeechService {
+  _FailingSpeech(this.error);
+
+  final Object error;
+
+  @override
+  Future<void> speak({
+    required String text,
+    required String languageCode,
+  }) async {
+    throw error;
+  }
+
+  @override
+  Future<void> stop() async {}
+}
+
 void main() {
-  testWidgets('模拟翻译、收藏和本地历史可在重建后查看', (tester) async {
-    final store = _MemoryHistoryStore();
-    Widget app() => XiaoanApp(
-      historyStore: store,
-      translationService: DemoTranslationService(),
+  setUpAll(() {
+    sqfliteFfiInit();
+    PackageInfo.setMockInitialValues(
+      appName: '小安翻译',
+      packageName: 'com.jbk.xiaoants',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
     );
+  });
 
-    await tester.pumpWidget(app());
+  late LocalStore store;
+  late ProviderContainer container;
+
+  setUp(() async {
+    store = await LocalStore.open(
+      path: inMemoryDatabasePath,
+      legacyFile: File('/nonexistent/xiaoan_history.json'),
+      factory: databaseFactoryFfi,
+    );
+    container = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        translationServiceProvider.overrideWithValue(DemoTranslationService()),
+        languageDetectionProvider.overrideWithValue(
+          TestLanguageDetectionService(),
+        ),
+        translationModelProvider.overrideWithValue(
+          DownloadedTranslationModels(),
+        ),
+      ],
+    );
+    await container.read(appControllerProvider.notifier).initialize();
+  });
+
+  tearDown(() async {
+    container.dispose();
+    await store.close();
+  });
+
+  Future<void> pumpApp(WidgetTester tester) async {
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const XiaoanApp()),
+    );
     await tester.pumpAndSettle();
-    expect(find.text('把想说的话，\n翻译得更简单。'), findsOneWidget);
+  }
 
+  Future<void> waitFor(WidgetTester tester, bool Function() condition) async {
+    for (var i = 0; i < 100 && !condition(); i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 10)),
+      );
+      await tester.pump(const Duration(milliseconds: 30));
+    }
+    expect(
+      condition(),
+      isTrue,
+      reason:
+          'state: ${container.read(appControllerProvider).phase}, '
+          'input: ${container.read(appControllerProvider).input}, '
+          'message: ${container.read(appControllerProvider).message}',
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('模拟翻译、收藏、历史和四个底部入口', (tester) async {
+    await pumpApp(tester);
+    expect(find.text('把想说的话，\n翻译得更简单。'), findsOneWidget);
     await tester.enterText(
       find.byKey(const Key('sourceInput')),
       'Hello, world!',
     );
+    expect(container.read(appControllerProvider).input, 'Hello, world!');
     await tester.pump();
     await tester.ensureVisible(find.text('开始翻译'));
     await tester.tap(find.text('开始翻译'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('你好，世界！'),
-      200,
-      scrollable: find.byType(Scrollable).first,
+    await tester.pump();
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).result?.id.isNotEmpty == true,
     );
     expect(find.text('你好，世界！'), findsOneWidget);
-
     await tester.ensureVisible(find.byTooltip('收藏译文'));
     await tester.tap(find.byTooltip('收藏译文'));
-    await tester.pumpAndSettle();
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).result?.favorite == true,
+    );
+
     await tester.tap(find.text('历史').last);
-    await tester.pumpAndSettle();
-    expect(find.text('Hello, world!'), findsOneWidget);
+    await waitFor(
+      tester,
+      () =>
+          find.text('翻译历史').evaluate().isNotEmpty &&
+          find.text('Hello, world!').evaluate().isNotEmpty,
+    );
     expect(find.text('你好，世界！'), findsOneWidget);
-
-    await tester.pumpWidget(const SizedBox());
-    await tester.pumpWidget(app());
-    await tester.pumpAndSettle();
+    expect(find.textContaining('演示记录'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).last, '找不到');
+    await waitFor(tester, () => find.text('没有找到相关记录').evaluate().isNotEmpty);
+    await tester.enterText(find.byType(TextField).last, '你好');
+    await waitFor(
+      tester,
+      () => find.text('Hello, world!').evaluate().isNotEmpty,
+    );
     await tester.tap(find.text('收藏').last);
-    await tester.pumpAndSettle();
-    expect(find.text('Hello, world!'), findsOneWidget);
-  });
-
-  testWidgets('语言切换与相同语言提示', (tester) async {
-    await tester.pumpWidget(
-      XiaoanApp(
-        historyStore: _MemoryHistoryStore(),
-        translationService: DemoTranslationService(),
-      ),
+    await waitFor(
+      tester,
+      () =>
+          find.text('我的收藏').evaluate().isNotEmpty &&
+          find.text('Hello, world!').evaluate().isNotEmpty,
     );
+    await tester.tap(find.text('设置').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('自动检测'));
+    expect(find.text('默认目标语言'), findsOneWidget);
+    await tester.tap(find.text('清空翻译历史'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('简体中文').last);
+    expect(find.text('收藏也会一并删除，此操作无法撤销。'), findsOneWidget);
+    await tester.tap(find.text('取消'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('sourceInput')), '你好');
+    expect(container.read(appControllerProvider).records, isNotEmpty);
+    await tester.tap(find.text('清空翻译历史'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('清空').last);
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).records.isEmpty,
+    );
+    await tester.runAsync(() => store.search(''));
     await tester.pump();
-    await tester.ensureVisible(find.text('开始翻译'));
-    await tester.tap(find.text('开始翻译'));
+    await tester.tap(find.text('翻译').last);
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.text('原文与译文语言相同，请更换目标语言'),
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.text('原文与译文语言相同，请更换目标语言'), findsOneWidget);
+    expect(find.byKey(const Key('sourceInput')), findsOneWidget);
+    expect(container.read(appControllerProvider).input, 'Hello, world!');
   });
 
-  test('本地历史文件可重新读取收藏状态', () async {
-    final directory = await Directory.systemTemp.createTemp('xiaoan_test_');
-    try {
-      final store = HistoryStore(File('${directory.path}/history.json'));
-      await store.save([
+  testWidgets('历史 ID 深链、未知地址和语言选择', (tester) async {
+    final saved = await tester.runAsync(
+      () => store.saveRecord(
         TranslationRecord(
-          sourceText: 'Hello',
-          translatedText: '你好',
+          sourceText: 'Good morning',
+          translatedText: '早上好',
           sourceLanguage: 'en',
           targetLanguage: 'zh',
           createdAt: DateTime(2026, 9, 24),
-          favorite: true,
         ),
-      ]);
-      final loaded = await store.load();
-      expect(loaded.single.translatedText, '你好');
-      expect(loaded.single.favorite, isTrue);
-    } finally {
-      await directory.delete(recursive: true);
-    }
+      ),
+    );
+    final recordId = saved!.id;
+    container.read(routerProvider).go('/translate?record=$recordId');
+    await pumpApp(tester);
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).result?.id == recordId,
+    );
+    await tester.scrollUntilVisible(
+      find.text('早上好'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('早上好'), findsOneWidget);
+
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, 1000));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('简体中文').first);
+    await tester.pumpAndSettle();
+    expect(find.text('选择译文语言'), findsOneWidget);
+    expect(find.text('自动检测'), findsNothing);
+    await tester.enterText(find.byType(TextField).last, 'en');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English').last);
+    await tester.pumpAndSettle();
+    expect(container.read(appControllerProvider).targetLanguage, 'en');
+
+    container.read(routerProvider).go('/missing');
+    await tester.pumpAndSettle();
+    expect(find.text('找不到这个页面'), findsOneWidget);
+    await tester.tap(find.text('返回翻译首页'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('sourceInput')), findsOneWidget);
+  });
+
+  testWidgets('设置主题和次级页面可返回', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('设置').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('跟随系统'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('深色').last);
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).themeMode == ThemeMode.dark,
+    );
+    expect(
+      Theme.of(tester.element(find.text('设置').first)).brightness,
+      Brightness.dark,
+    );
+    await tester.tap(find.text('离线语言包'));
+    await tester.pumpAndSettle();
+    await waitFor(
+      tester,
+      () => find.textContaining('模型状态来自设备').evaluate().isNotEmpty,
+    );
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.text('清空翻译历史'), findsOneWidget);
+
+    await tester.tap(find.text('关于小安翻译'));
+    await tester.pumpAndSettle();
+    expect(find.text('版本 1.0.0 (1)'), findsOneWidget);
+    expect(find.textContaining('Google ML Kit'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('隐私说明'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('关闭系统备份'), findsOneWidget);
+    expect(find.textContaining('不申请麦克风'), findsOneWidget);
+  });
+
+  testWidgets('历史记录可单条删除', (tester) async {
+    await tester.runAsync(
+      () => store.saveRecord(
+        TranslationRecord(
+          sourceText: 'Good morning',
+          translatedText: '早上好',
+          sourceLanguage: 'en',
+          targetLanguage: 'zh',
+          createdAt: DateTime(2026, 9, 24),
+        ),
+      ),
+    );
+    await pumpApp(tester);
+    await tester.tap(find.text('历史').last);
+    await waitFor(
+      tester,
+      () => find.text('Good morning').evaluate().isNotEmpty,
+    );
+    await tester.tap(find.byTooltip('删除记录'));
+    await waitFor(tester, () => find.text('还没有翻译记录').evaluate().isNotEmpty);
+  });
+
+  testWidgets('模型下载失败显示重试，成功后展示结果', (tester) async {
+    final models = _RetryModels();
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        translationServiceProvider.overrideWithValue(DemoTranslationService()),
+        languageDetectionProvider.overrideWithValue(
+          TestLanguageDetectionService(),
+        ),
+        translationModelProvider.overrideWithValue(models),
+      ],
+    );
+    final controller = container.read(appControllerProvider.notifier);
+    await tester.runAsync(controller.initialize);
+    controller.setSourceLanguage('en');
+    controller.setInput('Hello, world!');
+    await tester.runAsync(controller.translate);
+    await pumpApp(tester);
+
+    expect(find.text('重试翻译'), findsOneWidget);
+    expect(container.read(appControllerProvider).input, 'Hello, world!');
+    models.fail = false;
+    await tester.ensureVisible(find.text('重试翻译'));
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -180));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('重试翻译'));
+    await waitFor(
+      tester,
+      () =>
+          container.read(appControllerProvider).phase ==
+          TranslationPhase.success,
+    );
+    expect(
+      container.read(appControllerProvider).result?.translatedText,
+      '你好，世界！',
+    );
+  });
+
+  testWidgets('离线语言包页面查询状态并支持下载和删除', (tester) async {
+    final models = _ManagedModels();
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        translationServiceProvider.overrideWithValue(DemoTranslationService()),
+        languageDetectionProvider.overrideWithValue(
+          TestLanguageDetectionService(),
+        ),
+        translationModelProvider.overrideWithValue(models),
+      ],
+    );
+    await tester.runAsync(
+      () => container.read(appControllerProvider.notifier).initialize(),
+    );
+    await pumpApp(tester);
+    await tester.tap(find.text('设置').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('离线语言包'));
+    await waitFor(
+      tester,
+      () => find.byKey(const Key('download_zh')).evaluate().isNotEmpty,
+    );
+    expect(find.byKey(const Key('delete_en')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('download_zh')));
+    await waitFor(
+      tester,
+      () => find.byKey(const Key('delete_zh')).evaluate().isNotEmpty,
+    );
+    await tester.tap(find.byKey(const Key('delete_zh')));
+    await waitFor(
+      tester,
+      () => find.byKey(const Key('download_zh')).evaluate().isNotEmpty,
+    );
+  });
+
+  testWidgets('离线语言包下载失败后可再次下载', (tester) async {
+    final models = _RetryModels();
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        translationServiceProvider.overrideWithValue(DemoTranslationService()),
+        languageDetectionProvider.overrideWithValue(
+          TestLanguageDetectionService(),
+        ),
+        translationModelProvider.overrideWithValue(models),
+      ],
+    );
+    await tester.runAsync(
+      () => container.read(appControllerProvider.notifier).initialize(),
+    );
+    await pumpApp(tester);
+    await tester.tap(find.text('设置').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('离线语言包'));
+    await waitFor(
+      tester,
+      () => find.byKey(const Key('download_zh')).evaluate().isNotEmpty,
+    );
+    await tester.tap(find.byKey(const Key('download_zh')));
+    await waitFor(
+      tester,
+      () => find.textContaining('下载语言模型失败').evaluate().isNotEmpty,
+    );
+    expect(find.byKey(const Key('download_zh')), findsOneWidget);
+    models.fail = false;
+    await tester.tap(find.byKey(const Key('download_zh')));
+    await waitFor(
+      tester,
+      () => find.byKey(const Key('delete_zh')).evaluate().isNotEmpty,
+    );
+    expect(find.textContaining('下载语言模型失败'), findsNothing);
+  });
+
+  testWidgets('原文和译文使用各自语言朗读并可停止', (tester) async {
+    final speech = _SpeechRecorder();
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        translationServiceProvider.overrideWithValue(DemoTranslationService()),
+        languageDetectionProvider.overrideWithValue(
+          TestLanguageDetectionService(),
+        ),
+        translationModelProvider.overrideWithValue(
+          DownloadedTranslationModels(),
+        ),
+        speechServiceProvider.overrideWithValue(speech),
+      ],
+    );
+    final controller = container.read(appControllerProvider.notifier);
+    await tester.runAsync(controller.initialize);
+    controller.setSourceLanguage('en');
+    controller.setInput('Hello, world!');
+    await pumpApp(tester);
+
+    await tester.tap(find.byTooltip('朗读原文'));
+    await tester.pump();
+    expect(speech.calls.single, ('Hello, world!', 'en'));
+    await tester.tap(find.byTooltip('停止朗读'));
+    await tester.pump();
+    expect(speech.stops, 1);
+
+    await tester.runAsync(controller.translate);
+    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byTooltip('朗读译文'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('朗读译文'));
+    await tester.pump();
+    expect(speech.calls.last, ('你好，世界！', 'zh'));
+  });
+
+  for (final (error, message) in [
+    (UnsupportedError('当前设备暂不支持该语言朗读'), '当前设备暂不支持该语言朗读'),
+    (StateError('引擎异常'), '朗读失败，请检查设备语音服务'),
+  ]) {
+    testWidgets('朗读失败提示：$message', (tester) async {
+      container.dispose();
+      container = ProviderContainer(
+        overrides: [
+          localStoreProvider.overrideWithValue(store),
+          translationServiceProvider.overrideWithValue(
+            DemoTranslationService(),
+          ),
+          languageDetectionProvider.overrideWithValue(
+            TestLanguageDetectionService(),
+          ),
+          translationModelProvider.overrideWithValue(
+            DownloadedTranslationModels(),
+          ),
+          speechServiceProvider.overrideWithValue(_FailingSpeech(error)),
+        ],
+      );
+      final controller = container.read(appControllerProvider.notifier);
+      await tester.runAsync(controller.initialize);
+      controller.setSourceLanguage('en');
+      controller.setInput('Hello, world!');
+      await pumpApp(tester);
+      await tester.tap(find.byTooltip('朗读原文'));
+      await tester.pumpAndSettle();
+      expect(find.text(message), findsOneWidget);
+    });
+  }
+
+  testWidgets('默认语言与主题在重建后恢复', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('设置').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('默认目标语言'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English'));
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).defaultTargetLanguage == 'en',
+    );
+    await tester.tap(find.text('跟随系统'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('浅色').last);
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).themeMode == ThemeMode.light,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        translationServiceProvider.overrideWithValue(DemoTranslationService()),
+        languageDetectionProvider.overrideWithValue(
+          TestLanguageDetectionService(),
+        ),
+        translationModelProvider.overrideWithValue(
+          DownloadedTranslationModels(),
+        ),
+      ],
+    );
+    await tester.runAsync(
+      () => container.read(appControllerProvider.notifier).initialize(),
+    );
+    await pumpApp(tester);
+    expect(container.read(appControllerProvider).defaultTargetLanguage, 'en');
+    expect(container.read(appControllerProvider).themeMode, ThemeMode.light);
+    expect(container.read(appControllerProvider).targetLanguage, 'en');
   });
 }
