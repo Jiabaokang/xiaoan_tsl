@@ -14,6 +14,13 @@
 - `flutter test`：运行 `test/` 下的测试。
 - `flutter build appbundle --release`：配置好发布签名后生成 Android AAB。
 
+### 设备调试与安装规则（严格执行）
+
+- **必须在 Android 设备上调试**：涉及真机调试与运行时验证时，必须在已连接的 Android 实体设备上运行与调试，不使用其他非目标平台替代核心功能验证。
+- **仅限覆盖安装，严禁卸载安装**：
+  - 必须采用覆盖安装模式（例如标准的 `flutter run` 或 `adb install -r`）。
+  - 绝对严禁执行卸载操作（如 `adb uninstall`、带有 `--uninstall-first` 参数的命令等）。卸载重装会触发系统级安全二次授权弹窗，导致流程中断并强依赖人工盯屏确认。覆盖安装可保持已授权状态，保证调试流畅。
+
 ## 代码风格与命名
 
 Dart 代码使用默认的两个空格缩进，提交前运行 `dart format lib test`。文件名使用 `snake_case.dart`，类和组件使用 `UpperCamelCase`，变量与方法使用 `lowerCamelCase`。尽量拆分小组件，避免在 UI 的 `build` 方法中堆放业务逻辑。修改依赖时同步更新 `pubspec.lock`。
