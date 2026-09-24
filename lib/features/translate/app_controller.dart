@@ -19,9 +19,9 @@ enum TranslationPhase {
   error;
 
   bool get isBusy => switch (this) {
-    detecting || checkingModel || downloadingModel || translating => true,
-    _ => false,
-  };
+        detecting || checkingModel || downloadingModel || translating => true,
+        _ => false,
+      };
 }
 
 // 失败类型用于显示针对性的恢复操作。
@@ -80,24 +80,26 @@ class AppState {
     List<TranslationRecord>? records,
     ThemeMode? themeMode,
     bool? loaded,
-  }) => AppState(
-    input: input ?? this.input,
-    sourceLanguage: sourceLanguage ?? this.sourceLanguage,
-    targetLanguage: targetLanguage ?? this.targetLanguage,
-    defaultTargetLanguage: defaultTargetLanguage ?? this.defaultTargetLanguage,
-    detectedLanguage: identical(detectedLanguage, _unchanged)
-        ? this.detectedLanguage
-        : detectedLanguage as String?,
-    result: identical(result, _unchanged)
-        ? this.result
-        : result as TranslationRecord?,
-    phase: phase ?? this.phase,
-    failure: failure ?? this.failure,
-    message: message ?? this.message,
-    records: records ?? this.records,
-    themeMode: themeMode ?? this.themeMode,
-    loaded: loaded ?? this.loaded,
-  );
+  }) =>
+      AppState(
+        input: input ?? this.input,
+        sourceLanguage: sourceLanguage ?? this.sourceLanguage,
+        targetLanguage: targetLanguage ?? this.targetLanguage,
+        defaultTargetLanguage:
+            defaultTargetLanguage ?? this.defaultTargetLanguage,
+        detectedLanguage: identical(detectedLanguage, _unchanged)
+            ? this.detectedLanguage
+            : detectedLanguage as String?,
+        result: identical(result, _unchanged)
+            ? this.result
+            : result as TranslationRecord?,
+        phase: phase ?? this.phase,
+        failure: failure ?? this.failure,
+        message: message ?? this.message,
+        records: records ?? this.records,
+        themeMode: themeMode ?? this.themeMode,
+        loaded: loaded ?? this.loaded,
+      );
 }
 
 final appControllerProvider = NotifierProvider<AppController, AppState>(
@@ -232,9 +234,8 @@ class AppController extends Notifier<AppState> {
       );
       return;
     }
-    String? source = state.sourceLanguage == 'auto'
-        ? null
-        : state.sourceLanguage;
+    String? source =
+        state.sourceLanguage == 'auto' ? null : state.sourceLanguage;
     final target = state.targetLanguage;
     final request = ++_request;
     state = state.copyWith(

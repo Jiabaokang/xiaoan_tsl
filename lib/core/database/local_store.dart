@@ -79,27 +79,31 @@ class LocalStore {
           conflictAlgorithm: ConflictAlgorithm.ignore,
         );
       }
-      await transaction.insert('app_settings', {
-        'key': 'legacy_json_imported',
-        'value': '1',
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await transaction.insert(
+          'app_settings',
+          {
+            'key': 'legacy_json_imported',
+            'value': '1',
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace);
     });
   }
 
   static Map<String, Object> _recordMap(
     TranslationRecord record, {
     required String id,
-  }) => {
-    'id': id,
-    'source_text': record.sourceText,
-    'translated_text': record.translatedText,
-    'source_language': record.sourceLanguage,
-    'target_language': record.targetLanguage,
-    'is_favorite': record.favorite ? 1 : 0,
-    'engine': record.engine,
-    'created_at': record.createdAt.millisecondsSinceEpoch,
-    'updated_at': DateTime.now().millisecondsSinceEpoch,
-  };
+  }) =>
+      {
+        'id': id,
+        'source_text': record.sourceText,
+        'translated_text': record.translatedText,
+        'source_language': record.sourceLanguage,
+        'target_language': record.targetLanguage,
+        'is_favorite': record.favorite ? 1 : 0,
+        'engine': record.engine,
+        'created_at': record.createdAt.millisecondsSinceEpoch,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      };
 
   static TranslationRecord _fromRow(Map<String, Object?> row) =>
       TranslationRecord(
@@ -169,8 +173,7 @@ class LocalStore {
       limit: 1,
     );
     final previous = recent.isEmpty ? null : _fromRow(recent.single);
-    final id =
-        previous?.id ??
+    final id = previous?.id ??
         (record.id.isEmpty
             ? '${now.microsecondsSinceEpoch.toRadixString(36)}-${_random.nextInt(1 << 32).toRadixString(36)}'
             : record.id);
@@ -204,9 +207,9 @@ class LocalStore {
       )
       .then((_) {});
 
-  Future<void> deleteRecord(String id) => _database
-      .delete('translation_records', where: 'id = ?', whereArgs: [id])
-      .then((_) {});
+  Future<void> deleteRecord(String id) =>
+      _database.delete('translation_records',
+          where: 'id = ?', whereArgs: [id]).then((_) {});
 
   Future<void> clearRecords() =>
       _database.delete('translation_records').then((_) {});
@@ -223,10 +226,13 @@ class LocalStore {
   }
 
   Future<void> setSetting(String key, String value) => _database
-      .insert('app_settings', {
-        'key': key,
-        'value': value,
-      }, conflictAlgorithm: ConflictAlgorithm.replace)
+      .insert(
+          'app_settings',
+          {
+            'key': key,
+            'value': value,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace)
       .then((_) {});
 
   Future<void> close() => _database.close();

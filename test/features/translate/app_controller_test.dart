@@ -28,7 +28,8 @@ class _DeferredService implements TranslationService {
     required String text,
     required String sourceLanguage,
     required String targetLanguage,
-  }) => completer.future;
+  }) =>
+      completer.future;
 }
 
 void main() {

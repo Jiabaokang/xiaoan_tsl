@@ -23,8 +23,8 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
   Widget build(BuildContext context) {
     final mode =
         const {'source', 'target', 'default-target'}.contains(widget.mode)
-        ? widget.mode
-        : 'source';
+            ? widget.mode
+            : 'source';
     final appState = ref.watch(appControllerProvider);
     final selected = switch (mode) {
       'target' => appState.targetLanguage,

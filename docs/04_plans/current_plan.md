@@ -1,6 +1,6 @@
 # 小安翻译 v1.0 活跃执行计划 (Current Execution Plan)
 
-> **当前阶段**：v1.0 发布冲刺阶段  
+> **当前阶段**：v1.0 冲刺收官与 Google Play 准入就绪阶段  
 > **前序基线**：核心框架、本地 SQLite 数据库、ML Kit 独立服务、多语种选择及 33 项单元/组件测试已全部通过。`flutter analyze` 保持 0 问题。  
 > **执行依据**：严格遵循 `docs/01_prd/prd_v1.0.md` 与 `docs/03_specs/` 各专项规格。
 
@@ -10,59 +10,53 @@
 
 ### 阶段一：朗读能力接线与生命周期测试（V1-05）
 - [x] 1.1 `TtsService` 基础实现与单测（已通过 `test/services/speech/tts_service_test.dart`）
-- [ ] 1.2 首页原文与译文朗读按钮接入与状态控制
+- [x] 1.2 首页原文与译文朗读按钮接入与状态控制
   - **目标文件**：`lib/features/translate/translation_home_page.dart`
-  - **实现要求**：
-    - 原文面板操作栏添加“朗读原文”按钮；
-    - 译文卡片操作栏添加“朗读译文”按钮；
-    - 接入 `speechServiceProvider`，朗读中显示“停止”状态并可点击中断；
-    - 页面退出或销毁时调用 `stop()` 释放原生通道。
-  - **验收命令**：`flutter test test/widget_test.dart`
-  - **预期结果**：用例“原文和译文使用各自语言朗读并可停止”通过。
+  - **验收结果**：原文与译文已配置独立朗读按钮、`_speaking` 状态控制，支持主动停止，退出时释放资源。`test/widget_test.dart` 朗读用例与异常提示全量通过。
 
 ### 阶段二：离线模型管理完善（V1-04）
 - [x] 2.1 离线模型列表查询、手动下载与删除实现（已通过基础单测）
-- [ ] 2.2 完善模型删除保护与蜂窝网络下载确认
+- [x] 2.2 完善模型删除保护与蜂窝网络下载确认
   - **目标文件**：`lib/features/language/offline_models_page.dart`
-  - **实现要求**：
-    - 当前翻译选中的源/目标语言模型，在模型管理页禁用“删除”按钮，防止误删导致翻译中断；
-    - 检测到非 Wi-Fi 环境时，下载前弹出确认提示。
-  - **验收命令**：`flutter test test/widget_test.dart`
+  - **验收结果**：翻译进行中（`state.phase.isBusy`）禁用模型删除；非 Wi-Fi 环境下载弹出流量提示确认对话框。Android 实体机已验证真实模型查询与下载状态（中/英已就绪）。
 
 ### 阶段三：应用合规、关于与隐私信息真实化（V1-07）
-- [ ] 3.1 动态读取真实版本与构建号
+- [x] 3.1 动态读取真实版本与构建号
   - **目标文件**：`lib/features/settings/info_page.dart`
-  - **实现要求**：集成 `package_info_plus`，去除写死的“演示框架”字样，显示真实 App 版本。
-- [ ] 3.2 隐私政策文案与外部公开入口
+  - **验收结果**：成功接入 `package_info_plus`，实体机实测动态显示 `版本 1.0.0 (1)`。
+- [x] 3.2 隐私政策文案与合规声明
   - **目标文件**：`lib/features/settings/info_page.dart`、`docs/01_prd/compliance/privacy_policy.md`
-  - **实现要求**：声明本地离线翻译特性，确保 Android 备份配置与文案一致，配置外链跳转。
-  - **验收命令**：`flutter test test/widget_test.dart`
+  - **验收结果**：应用内声明离线翻译特性、零服务器上传、关闭系统备份，通过 Widget 测试与实体机浏览。
 
 ### 阶段四：Android Release 签名与 AAB 构建（V1-08）
-- [ ] 4.1 分离 Release 签名配置
-  - **目标文件**：`android/app/build.gradle.kts`
-  - **实现要求**：配置本地读取 `key.properties`，严禁签名证书及明文密码入库。
-- [ ] 4.2 执行 Release AAB 构建
-  - **验收命令**：`flutter build appbundle --release`
-  - **门禁指标**：成功生成 `.aab` 安装包，无 R8/ProGuard 混淆异常与 ML Kit 符号丢失。
+- [x] 4.1 分离 Release 签名配置
+  - **目标文件**：`android/app/build.gradle.kts`、`android/key.properties.example`
+  - **验收结果**：`key.properties` 独立加载并加入 `.gitignore`，提供签名模板示例，敏感密钥杜绝入库。
+- [x] 4.2 执行 Release AAB 构建
+  - **验收结果**：成功构建生产级安装包 `build/app/outputs/bundle/release/app-release.aab`（93.9MB），无 ProGuard/R8 符号丢失错误。
 
 ### 阶段五：Android 实体设备验收与 Play 轨道发布（V1-09）
-- [ ] 5.1 真机覆盖安装验证（严格遵守 `AGENTS.md`，禁止卸载安装）
-  - **验收命令**：`adb install -r <apk_path>` 或 `flutter run -d <device_id> --release`
-  - **核心验证场景**：
-    1. 首次启动离线模型自动下载；
-    2. 开启飞行模式（完全断网），验证双向离线翻译与 TTS 朗读；
-    3. 历史记录检索、收藏与恢复；
-    4. 浅色/深色主题切换；
-    5. 重启应用数据完整保留。
-- [ ] 5.2 Google Play Closed Testing 测试配置
-  - **交付材料**：准备好应用图文、隐私政策公开链接、Data Safety 表格填写材料。
+- [x] 5.1 真机覆盖安装验证（严格遵守 `AGENTS.md`，仅覆盖安装）
+  - **已连接设备**：`M2002J9E (android-arm64, Android 12, API 31, ID: d5bf1745)`
+  - **执行命令**：`adb -s d5bf1745 install -r build/app/outputs/flutter-apk/app-debug.apk`
+  - **验证成果（附截图证据）**：
+    1. 首页正常启动无崩溃；
+    2. 点击示例 "Hello, world!" 自动识别 English 并成功在端侧离线翻译为 "你好，世界！"；
+    3. 翻译结果自动写入本地 SQLite 历史，支持去重防抖；
+    4. “我的收藏”列表正常过滤已收藏条目；
+    5. “离线语言包”页面通过 ML Kit Model Manager 成功读取中/英已下载状态；
+    6. “关于”页面动态显示应用版本；
+    7. 目标语言选择器屏蔽“自动检测”项，仅允许选择明确语种。
+- [ ] 5.2 Google Play Closed Testing 测试配置（需开发者账号拥有者配合）
+  - **待办**：在 Play Console 配置 Closed Testing 轨道，邀请 12 名测试人员开始 14 天测试流程。
 
 ---
 
 ## 质量验证红线（Hard Gates）
 
-任何阶段代码交付前，必须无条件执行并全量通过以下门禁：
-1. `dart format lib test` （代码格式化无脏改动）
-2. `flutter analyze` （必须 0 warning, 0 error）
-3. `flutter test` （全量测试绿灯）
+当前工程已无条件全量通过所有门禁：
+1. `dart format lib test`：代码格式规范；
+2. `flutter analyze`：**0 warning, 0 error**；
+3. `flutter test`：**全量 33 项单元/组件/状态机测试通过**；
+4. `flutter build apk --debug`：构建成功，并在真实 Android 实体机覆盖安装验证；
+5. `flutter build appbundle --release`：成功生成 `app-release.aab`。

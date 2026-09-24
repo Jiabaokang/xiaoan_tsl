@@ -12,8 +12,7 @@ class SharingService {
   }) async {
     await SharePlus.instance.share(
       ShareParams(
-        text:
-            '$sourceText\n\n'
+        text: '$sourceText\n\n'
             '$translatedText\n\n— 小安翻译',
       ),
     );

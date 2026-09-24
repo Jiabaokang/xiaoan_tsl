@@ -1,0 +1,11 @@
+# Android Release 签名配置模板
+# 复制本文件为 android/key.properties 并填写真实证书信息（不要将 key.properties 提交到代码仓库）
+#
+# storePassword=你的密钥库密码
+# keyPassword=你的密钥密码
+# keyAlias=你的密钥别名 (如 upload 或 release)
+# storeFile=你的密钥库文件相对路径 (如 ../upload-keystore.jks)
+storePassword=example_store_password
+keyPassword=example_key_password
+keyAlias=upload
+storeFile=../upload-keystore.jks

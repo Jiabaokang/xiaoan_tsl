@@ -82,8 +82,8 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
                     _search.text.isNotEmpty
                         ? '没有找到相关记录'
                         : widget.favoritesOnly
-                        ? '还没有收藏'
-                        : '还没有翻译记录',
+                            ? '还没有收藏'
+                            : '还没有翻译记录',
                   ),
                 );
               }

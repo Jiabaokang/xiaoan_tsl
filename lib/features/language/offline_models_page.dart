@@ -157,20 +157,20 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : entry.value
-                        ? TextButton(
-                            key: Key('delete_${entry.key}'),
-                            onPressed: translating || _operatingCode != null
-                                ? null
-                                : () => _operate(entry.key, remove: true),
-                            child: const Text('删除'),
-                          )
-                        : FilledButton.tonal(
-                            key: Key('download_${entry.key}'),
-                            onPressed: translating || _operatingCode != null
-                                ? null
-                                : () => _operate(entry.key, remove: false),
-                            child: const Text('下载'),
-                          ),
+                            ? TextButton(
+                                key: Key('delete_${entry.key}'),
+                                onPressed: translating || _operatingCode != null
+                                    ? null
+                                    : () => _operate(entry.key, remove: true),
+                                child: const Text('删除'),
+                              )
+                            : FilledButton.tonal(
+                                key: Key('download_${entry.key}'),
+                                onPressed: translating || _operatingCode != null
+                                    ? null
+                                    : () => _operate(entry.key, remove: false),
+                                child: const Text('下载'),
+                              ),
                   ),
               ],
             );

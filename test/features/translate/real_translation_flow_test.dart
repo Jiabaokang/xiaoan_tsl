@@ -65,7 +65,8 @@ class _Translator implements TranslationService {
     required String text,
     required String sourceLanguage,
     required String targetLanguage,
-  }) async => '真实译文';
+  }) async =>
+      '真实译文';
 }
 
 void main() {

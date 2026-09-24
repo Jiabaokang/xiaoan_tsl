@@ -270,13 +270,13 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                               onPressed: _speaking
                                   ? _stopSpeech
                                   : state.input.trim().isEmpty
-                                  ? null
-                                  : () => _speak(
-                                      state.input,
-                                      state.sourceLanguage == 'auto'
-                                          ? state.detectedLanguage
-                                          : state.sourceLanguage,
-                                    ),
+                                      ? null
+                                      : () => _speak(
+                                            state.input,
+                                            state.sourceLanguage == 'auto'
+                                                ? state.detectedLanguage
+                                                : state.sourceLanguage,
+                                          ),
                             ),
                             IconButton(
                               tooltip: '清空输入',
@@ -293,8 +293,7 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
             ),
             const SizedBox(height: 13),
             FilledButton.icon(
-              onPressed:
-                  state.input.trim().isEmpty ||
+              onPressed: state.input.trim().isEmpty ||
                       state.phase.isBusy ||
                       !state.loaded
                   ? null
@@ -415,16 +414,15 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                           onPressed: _speaking
                               ? _stopSpeech
                               : state.result == null
-                              ? null
-                              : () => _speak(
-                                  state.result!.translatedText,
-                                  state.result!.targetLanguage,
-                                ),
+                                  ? null
+                                  : () => _speak(
+                                        state.result!.translatedText,
+                                        state.result!.targetLanguage,
+                                      ),
                         ),
                         IconButton(
-                          tooltip: state.result?.favorite == true
-                              ? '取消收藏'
-                              : '收藏译文',
+                          tooltip:
+                              state.result?.favorite == true ? '取消收藏' : '收藏译文',
                           onPressed: state.result?.id.isNotEmpty == true
                               ? () => controller.toggleFavorite(state.result!)
                               : null,

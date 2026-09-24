@@ -24,26 +24,26 @@ class TranslationRecord {
   final String engine;
 
   TranslationRecord withFavorite(bool value) => TranslationRecord(
-    id: id,
-    sourceText: sourceText,
-    translatedText: translatedText,
-    sourceLanguage: sourceLanguage,
-    targetLanguage: targetLanguage,
-    createdAt: createdAt,
-    favorite: value,
-    engine: engine,
-  );
+        id: id,
+        sourceText: sourceText,
+        translatedText: translatedText,
+        sourceLanguage: sourceLanguage,
+        targetLanguage: targetLanguage,
+        createdAt: createdAt,
+        favorite: value,
+        engine: engine,
+      );
 
   Map<String, Object> toJson() => {
-    'id': id,
-    'sourceText': sourceText,
-    'translatedText': translatedText,
-    'sourceLanguage': sourceLanguage,
-    'targetLanguage': targetLanguage,
-    'createdAt': createdAt.toIso8601String(),
-    'favorite': favorite,
-    'engine': engine,
-  };
+        'id': id,
+        'sourceText': sourceText,
+        'translatedText': translatedText,
+        'sourceLanguage': sourceLanguage,
+        'targetLanguage': targetLanguage,
+        'createdAt': createdAt.toIso8601String(),
+        'favorite': favorite,
+        'engine': engine,
+      };
 
   factory TranslationRecord.fromJson(Map<String, dynamic> json) =>
       TranslationRecord(

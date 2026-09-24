@@ -48,3 +48,8 @@ app.*.map.json
 # FVM Version Cache
 .fvm/
 .fvmrc
+
+# Android Keystore and signing credentials
+**/key.properties
+*.jks
+*.keystore

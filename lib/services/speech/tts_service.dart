@@ -2,18 +2,18 @@ import 'package:flutter_tts/flutter_tts.dart';
 
 // 将翻译语言代码映射为设备朗读使用的 locale。
 String? ttsLocaleForCode(String code) => switch (code) {
-  'zh' => 'zh-CN',
-  'en' => 'en-US',
-  'ja' => 'ja-JP',
-  'ko' => 'ko-KR',
-  'fr' => 'fr-FR',
-  'de' => 'de-DE',
-  'es' => 'es-ES',
-  'pt' => 'pt-BR',
-  'it' => 'it-IT',
-  'ru' => 'ru-RU',
-  _ => null,
-};
+      'zh' => 'zh-CN',
+      'en' => 'en-US',
+      'ja' => 'ja-JP',
+      'ko' => 'ko-KR',
+      'fr' => 'fr-FR',
+      'de' => 'de-DE',
+      'es' => 'es-ES',
+      'pt' => 'pt-BR',
+      'it' => 'it-IT',
+      'ru' => 'ru-RU',
+      _ => null,
+    };
 
 // 页面只通过此边界控制系统朗读和停止。
 abstract interface class SpeechService {

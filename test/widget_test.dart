@@ -152,8 +152,7 @@ void main() {
     expect(
       condition(),
       isTrue,
-      reason:
-          'state: ${container.read(appControllerProvider).phase}, '
+      reason: 'state: ${container.read(appControllerProvider).phase}, '
           'input: ${container.read(appControllerProvider).input}, '
           'message: ${container.read(appControllerProvider).message}',
     );
