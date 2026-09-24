@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +25,7 @@ class TranslationHomePage extends ConsumerStatefulWidget {
 // 输入控制器与可恢复的应用状态保持同步。
 class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
   final _input = TextEditingController();
+  Timer? _translationTimer;
   bool _speaking = false;
   int _speechRequest = 0;
   SpeechService? _activeSpeech;
@@ -49,6 +52,7 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
 
   @override
   void dispose() {
+    _translationTimer?.cancel();
     _speechRequest++;
     if (_speaking) {
       _activeSpeech?.stop();
@@ -59,6 +63,25 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
 
   void _notice(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  // 连续输入只在停顿后翻译，避免每个字符都触发模型与历史写入。
+  void _scheduleTranslation() {
+    _translationTimer?.cancel();
+    if (ref.read(appControllerProvider).input.trim().isEmpty) return;
+    _translationTimer = Timer(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      final state = ref.read(appControllerProvider);
+      if (state.loaded && state.result == null) {
+        ref.read(appControllerProvider.notifier).translate();
+      }
+    });
+  }
+
+  // 输入变化立即撤销旧结果，再安排本次自动翻译。
+  void _onInputChanged(String value) {
+    ref.read(appControllerProvider.notifier).setInput(value);
+    _scheduleTranslation();
   }
 
   // 新朗读请求先停止旧语音，完成回调只允许更新当前请求。
@@ -126,6 +149,16 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+      appControllerProvider.select(
+        (state) => (state.sourceLanguage, state.targetLanguage),
+      ),
+      (previous, next) {
+        if (ref.read(appControllerProvider).result == null) {
+          _scheduleTranslation();
+        }
+      },
+    );
     ref.listen(appControllerProvider.select((state) => state.input), (
       previous,
       next,
@@ -140,6 +173,8 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
     final state = ref.watch(appControllerProvider);
     final controller = ref.read(appControllerProvider.notifier);
     final theme = Theme.of(context);
+    final reversed = state.sourceLanguage != 'auto' &&
+        state.detectedLanguage == state.targetLanguage;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -196,8 +231,12 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                   Expanded(
                     child: _languageButton(
                       '原文语言',
-                      state.sourceLanguage,
-                      () => context.push('/languages?mode=source'),
+                      reversed ? state.targetLanguage : state.sourceLanguage,
+                      () => context.push(
+                        reversed
+                            ? '/languages?mode=target'
+                            : '/languages?mode=source',
+                      ),
                     ),
                   ),
                   IconButton(
@@ -208,8 +247,12 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                   Expanded(
                     child: _languageButton(
                       '译文语言',
-                      state.targetLanguage,
-                      () => context.push('/languages?mode=target'),
+                      reversed ? state.sourceLanguage : state.targetLanguage,
+                      () => context.push(
+                        reversed
+                            ? '/languages?mode=source'
+                            : '/languages?mode=target',
+                      ),
                     ),
                   ),
                 ],
@@ -248,7 +291,7 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                         border: InputBorder.none,
                         counterText: '',
                       ),
-                      onChanged: controller.setInput,
+                      onChanged: _onInputChanged,
                     ),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -273,15 +316,16 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                                       ? null
                                       : () => _speak(
                                             state.input,
-                                            state.sourceLanguage == 'auto'
-                                                ? state.detectedLanguage
-                                                : state.sourceLanguage,
+                                            state.detectedLanguage ??
+                                                (state.sourceLanguage == 'auto'
+                                                    ? null
+                                                    : state.sourceLanguage),
                                           ),
                             ),
                             IconButton(
                               tooltip: '清空输入',
                               icon: const Icon(Icons.close),
-                              onPressed: () => controller.setInput(''),
+                              onPressed: () => _onInputChanged(''),
                             ),
                           ],
                         ),
@@ -305,7 +349,13 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.arrow_forward),
-              label: Text(state.phase.isBusy ? state.message : '开始翻译'),
+              label: Text(
+                state.phase.isBusy
+                    ? state.message
+                    : state.phase == TranslationPhase.success
+                        ? '重新翻译'
+                        : '开始翻译',
+              ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(51),
               ),
@@ -346,13 +396,9 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                       child: ActionChip(
                         label: Text(sample),
                         onPressed: () {
-                          controller.setSourceLanguage('auto');
-                          controller.setTargetLanguage(
-                            RegExp(r'[\u4e00-\u9fff]').hasMatch(sample)
-                                ? 'en'
-                                : 'zh',
-                          );
-                          controller.setInput(sample);
+                          controller.setSourceLanguage('en');
+                          controller.setTargetLanguage('zh');
+                          _onInputChanged(sample);
                         },
                       ),
                     ),

@@ -159,6 +159,65 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('输入后自动显示双向译文', (tester) async {
+    await pumpApp(tester);
+    final input = find.byKey(const Key('sourceInput'));
+    await tester.enterText(input, 'Hello, world!');
+    await waitFor(
+      tester,
+      () =>
+          container.read(appControllerProvider).result?.translatedText ==
+          '你好，世界！',
+    );
+    await tester.scrollUntilVisible(
+      find.text('你好，世界！'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('你好，世界！'), findsOneWidget);
+    expect(find.text('重新翻译'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      input,
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+
+    await tester.enterText(input, '你好，世界！');
+    await waitFor(
+      tester,
+      () =>
+          container.read(appControllerProvider).result?.translatedText ==
+          'Hello, world!',
+    );
+    expect(container.read(appControllerProvider).result?.targetLanguage, 'en');
+    await tester.scrollUntilVisible(
+      find.text('原文语言'),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final sourceButton = find.ancestor(
+      of: find.text('原文语言'),
+      matching: find.byType(TextButton),
+    );
+    final targetButton = find.ancestor(
+      of: find.text('译文语言'),
+      matching: find.byType(TextButton),
+    );
+    expect(
+      find.descendant(of: sourceButton, matching: find.text('简体中文')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: targetButton, matching: find.text('English')),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(sourceButton);
+    await tester.tap(sourceButton);
+    await tester.pumpAndSettle();
+    expect(find.text('选择原文语言'), findsOneWidget);
+  });
+
   testWidgets('模拟翻译、收藏、历史和四个底部入口', (tester) async {
     await pumpApp(tester);
     expect(find.text('把想说的话，\n翻译得更简单。'), findsOneWidget);
@@ -491,6 +550,20 @@ void main() {
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('朗读译文'));
+    await tester.pump();
+    expect(speech.calls.last, ('你好，世界！', 'zh'));
+
+    await tester.tap(find.byTooltip('停止朗读').last);
+    await tester.pump();
+    controller.setInput('你好，世界！');
+    await tester.runAsync(controller.translate);
+    await tester.pump();
+    await tester.scrollUntilVisible(
+      find.byTooltip('朗读原文'),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byTooltip('朗读原文'));
     await tester.pump();
     expect(speech.calls.last, ('你好，世界！', 'zh'));
   });

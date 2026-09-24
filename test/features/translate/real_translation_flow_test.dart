@@ -104,14 +104,14 @@ void main() {
     await directory.delete(recursive: true);
   });
 
-  test('手选语言跳过识别，仅下载缺少的模型并保存引擎', () async {
+  test('输入属于原文语言时识别后翻译成另一种语言', () async {
     models.downloaded.add('zh');
     final controller = container.read(appControllerProvider.notifier);
     controller.setSourceLanguage('en');
     controller.setInput('Hello, world!');
     await controller.translate();
 
-    expect(detector.calls, 0);
+    expect(detector.calls, 1);
     expect(models.checked, ['en', 'zh']);
     expect(models.downloads, ['en']);
     expect(
@@ -121,14 +121,54 @@ void main() {
     expect((await store.search('')).single.engine, 'mlkit');
   });
 
-  test('无法识别时要求手选，不触发模型下载', () async {
+  test('输入属于译文语言时自动反向翻译并保存实际语言方向', () async {
+    detector.result = 'zh';
+    final controller = container.read(appControllerProvider.notifier);
+    controller.setSourceLanguage('en');
+    controller.setTargetLanguage('zh');
+    controller.setInput('你好，世界！');
+    await controller.translate();
+
+    final result = container.read(appControllerProvider).result;
+    expect(result?.sourceLanguage, 'zh');
+    expect(result?.targetLanguage, 'en');
+    expect((await store.search('')).single.targetLanguage, 'en');
+  });
+
+  test('输入语言不在所选两种语言中时不启动翻译', () async {
+    detector.result = 'fr';
+    final controller = container.read(appControllerProvider.notifier);
+    controller.setSourceLanguage('en');
+    controller.setTargetLanguage('zh');
+    controller.setInput('Bonjour tout le monde');
+    await controller.translate();
+
+    expect(container.read(appControllerProvider).phase, TranslationPhase.error);
+    expect(models.checked, isEmpty);
+    expect(await store.search(''), isEmpty);
+  });
+
+  test('默认译文语言改变后撤销旧译文并保持两种不同语言', () async {
+    final controller = container.read(appControllerProvider.notifier);
+    controller.setInput('Hello, world!');
+    await controller.translate();
+    expect(container.read(appControllerProvider).result, isNotNull);
+
+    await controller.setDefaultTargetLanguage('en');
+    final state = container.read(appControllerProvider);
+    expect(state.sourceLanguage, 'zh');
+    expect(state.targetLanguage, 'en');
+    expect(state.result, isNull);
+  });
+
+  test('无法识别时提示补充输入，不触发模型下载', () async {
     detector.result = null;
     final controller = container.read(appControllerProvider.notifier);
     controller.setInput('Something long enough');
     await controller.translate();
 
     expect(container.read(appControllerProvider).phase, TranslationPhase.error);
-    expect(container.read(appControllerProvider).message, contains('手动选择'));
+    expect(container.read(appControllerProvider).message, contains('更完整的内容'));
     expect(models.checked, isEmpty);
   });
 

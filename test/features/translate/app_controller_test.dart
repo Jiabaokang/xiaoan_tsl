@@ -35,7 +35,7 @@ class _DeferredService implements TranslationService {
 void main() {
   setUpAll(sqfliteFfiInit);
 
-  test('短文本要求手选语言，成功翻译写入历史', () async {
+  test('短文本识别失败，完整文本翻译后写入历史', () async {
     final directory = await Directory.systemTemp.createTemp('xiaoan_state_');
     try {
       final store = await LocalStore.open(
@@ -65,7 +65,6 @@ void main() {
         container.read(appControllerProvider).phase,
         TranslationPhase.error,
       );
-      controller.setSourceLanguage('en');
       controller.setInput('Hello, world!');
       await controller.translate();
       expect(
@@ -131,6 +130,8 @@ void main() {
       var controller = container.read(appControllerProvider.notifier);
       await controller.initialize();
       await controller.setDefaultTargetLanguage('en');
+      expect(container.read(appControllerProvider).sourceLanguage, 'zh');
+      expect(container.read(appControllerProvider).targetLanguage, 'en');
       await controller.setThemeMode(ThemeMode.dark);
       container.dispose();
 
@@ -140,6 +141,7 @@ void main() {
       controller = container.read(appControllerProvider.notifier);
       await controller.initialize();
       expect(container.read(appControllerProvider).targetLanguage, 'en');
+      expect(container.read(appControllerProvider).sourceLanguage, 'zh');
       expect(container.read(appControllerProvider).themeMode, ThemeMode.dark);
       container.dispose();
       await store.close();

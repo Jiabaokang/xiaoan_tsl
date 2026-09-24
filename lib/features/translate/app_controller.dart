@@ -39,7 +39,7 @@ enum TranslationFailure {
 class AppState {
   const AppState({
     this.input = '',
-    this.sourceLanguage = 'auto',
+    this.sourceLanguage = 'en',
     this.targetLanguage = 'zh',
     this.defaultTargetLanguage = 'zh',
     this.detectedLanguage,
@@ -128,6 +128,9 @@ class AppController extends Notifier<AppState> {
       if (!ref.mounted) return;
       final theme = ThemeMode.values.where((mode) => mode.name == themeName);
       state = state.copyWith(
+        sourceLanguage: state.sourceLanguage == target
+            ? (target == 'en' ? 'zh' : 'en')
+            : state.sourceLanguage,
         targetLanguage: target,
         defaultTargetLanguage: target,
         themeMode: theme.isEmpty ? ThemeMode.system : theme.first,
@@ -175,6 +178,7 @@ class AppController extends Notifier<AppState> {
     state = state.copyWith(
       targetLanguage: code,
       result: null,
+      detectedLanguage: null,
       phase: TranslationPhase.idle,
       failure: TranslationFailure.none,
       message: '等待翻译',
@@ -186,9 +190,19 @@ class AppController extends Notifier<AppState> {
     await ref.read(localStoreProvider).setSetting('default_target', code);
     if (!ref.mounted) return;
     final useAsCurrent = state.targetLanguage == state.defaultTargetLanguage;
+    final targetChanged = useAsCurrent && state.targetLanguage != code;
+    if (targetChanged) _request++;
     state = state.copyWith(
       defaultTargetLanguage: code,
       targetLanguage: useAsCurrent ? code : state.targetLanguage,
+      sourceLanguage: targetChanged && state.sourceLanguage == code
+          ? state.targetLanguage
+          : state.sourceLanguage,
+      detectedLanguage: targetChanged ? null : state.detectedLanguage,
+      result: targetChanged ? null : state.result,
+      phase: targetChanged ? TranslationPhase.idle : state.phase,
+      failure: targetChanged ? TranslationFailure.none : state.failure,
+      message: targetChanged ? '等待翻译' : state.message,
     );
   }
 
@@ -234,36 +248,46 @@ class AppController extends Notifier<AppState> {
       );
       return;
     }
-    String? source =
-        state.sourceLanguage == 'auto' ? null : state.sourceLanguage;
-    final target = state.targetLanguage;
+    final selectedSource = state.sourceLanguage;
+    final selectedTarget = state.targetLanguage;
     final request = ++_request;
     state = state.copyWith(
-      phase: source == null
-          ? TranslationPhase.detecting
-          : TranslationPhase.checkingModel,
+      phase: TranslationPhase.detecting,
       failure: TranslationFailure.none,
-      message: source == null ? '正在识别原文语言' : '正在检查离线模型',
+      message: '正在识别输入语言',
       result: null,
     );
     try {
-      if (source == null) {
-        source = await ref.read(languageDetectionProvider).identify(text);
-        if (!ref.mounted || request != _request) return;
-      }
+      final source = await ref.read(languageDetectionProvider).identify(text);
+      if (!ref.mounted || request != _request) return;
       if (source == null || !appLanguages.containsKey(source)) {
         state = state.copyWith(
           phase: TranslationPhase.error,
           failure: TranslationFailure.detection,
-          message: '无法判断语言，请手动选择原文语言',
+          message: '无法识别输入语言，请输入更完整的内容',
         );
         return;
       }
-      if (source == target) {
+      if (selectedSource == selectedTarget) {
         state = state.copyWith(
           phase: TranslationPhase.error,
           failure: TranslationFailure.unsupportedLanguage,
-          message: '原文与译文语言相同，请更换目标语言',
+          message: '请选择两种不同的语言',
+        );
+        return;
+      }
+      final String target;
+      if (source == selectedSource) {
+        target = selectedTarget;
+      } else if (source == selectedTarget && selectedSource != 'auto') {
+        target = selectedSource;
+      } else if (selectedSource == 'auto' && source != selectedTarget) {
+        target = selectedTarget;
+      } else {
+        state = state.copyWith(
+          phase: TranslationPhase.error,
+          failure: TranslationFailure.unsupportedLanguage,
+          message: '输入语言不在所选语言组合中，请调整语言',
         );
         return;
       }
@@ -337,7 +361,7 @@ class AppController extends Notifier<AppState> {
           _ => TranslationFailure.translation,
         };
         final message = switch (failure) {
-          TranslationFailure.detection => '语言识别失败，请手动选择原文语言',
+          TranslationFailure.detection => '语言识别失败，请重试',
           TranslationFailure.modelCheck => '无法检查语言模型，请重试',
           TranslationFailure.modelDownload => '语言模型下载失败，请检查网络后重试',
           _ => '翻译失败，请重试',

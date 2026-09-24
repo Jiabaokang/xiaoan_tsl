@@ -26,19 +26,21 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
             ? widget.mode
             : 'source';
     final appState = ref.watch(appControllerProvider);
+    final reversed = appState.sourceLanguage != 'auto' &&
+        appState.detectedLanguage == appState.targetLanguage;
     final selected = switch (mode) {
       'target' => appState.targetLanguage,
       'default-target' => appState.defaultTargetLanguage,
       _ => appState.sourceLanguage,
     };
     final title = switch (mode) {
-      'target' => '选择译文语言',
+      'target' => reversed ? '选择原文语言' : '选择译文语言',
       'default-target' => '默认目标语言',
-      _ => '选择原文语言',
+      _ => reversed ? '选择译文语言' : '选择原文语言',
     };
     final languages = appLanguages.entries.where(
       (entry) =>
-          (mode == 'source' || entry.key != 'auto') &&
+          entry.key != 'auto' &&
           (entry.value.toLowerCase().contains(_query.toLowerCase()) ||
               entry.key.contains(_query.toLowerCase())),
     );
