@@ -1,50 +1,60 @@
 import 'dart:convert';
 import 'dart:io';
 
-// 一条本地演示翻译记录，收藏状态与历史共用同一份数据。
+// 一条本地翻译记录，保留结果来自演示还是设备端引擎。
 class TranslationRecord {
   const TranslationRecord({
+    this.id = '',
     required this.sourceText,
     required this.translatedText,
     required this.sourceLanguage,
     required this.targetLanguage,
     required this.createdAt,
     this.favorite = false,
+    this.engine = 'demo',
   });
 
+  final String id;
   final String sourceText;
   final String translatedText;
   final String sourceLanguage;
   final String targetLanguage;
   final DateTime createdAt;
   final bool favorite;
+  final String engine;
 
   TranslationRecord withFavorite(bool value) => TranslationRecord(
+    id: id,
     sourceText: sourceText,
     translatedText: translatedText,
     sourceLanguage: sourceLanguage,
     targetLanguage: targetLanguage,
     createdAt: createdAt,
     favorite: value,
+    engine: engine,
   );
 
   Map<String, Object> toJson() => {
+    'id': id,
     'sourceText': sourceText,
     'translatedText': translatedText,
     'sourceLanguage': sourceLanguage,
     'targetLanguage': targetLanguage,
     'createdAt': createdAt.toIso8601String(),
     'favorite': favorite,
+    'engine': engine,
   };
 
   factory TranslationRecord.fromJson(Map<String, dynamic> json) =>
       TranslationRecord(
+        id: json['id'] as String? ?? '',
         sourceText: json['sourceText'] as String,
         translatedText: json['translatedText'] as String,
         sourceLanguage: json['sourceLanguage'] as String,
         targetLanguage: json['targetLanguage'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
         favorite: json['favorite'] as bool? ?? false,
+        engine: json['engine'] as String? ?? 'demo',
       );
 }
 

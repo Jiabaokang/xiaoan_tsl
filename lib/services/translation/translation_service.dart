@@ -1,5 +1,7 @@
 // 翻译服务边界；正式接入 ML Kit 时只需替换实现。
 abstract interface class TranslationService {
+  String get engineId;
+
   Future<String> translate({
     required String text,
     required String sourceLanguage,
@@ -9,6 +11,9 @@ abstract interface class TranslationService {
 
 // 仅提供原型中的固定示例，其余输入明确标记为模拟结果。
 class DemoTranslationService implements TranslationService {
+  @override
+  String get engineId => 'demo';
+
   static const _examples = <String, String>{
     'en:zh:hello, world!': '你好，世界！',
     'en:zh:good morning': '早上好',
