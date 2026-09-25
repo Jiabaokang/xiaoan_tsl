@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:xiaoan_tsl/app.dart';
+import 'package:xiaoan_tsl/core/widgets/app_panel.dart';
 import 'package:xiaoan_tsl/features/translate/app_controller.dart';
 import 'package:xiaoan_tsl/core/database/database_provider.dart';
 import 'package:xiaoan_tsl/core/router/app_router.dart';
@@ -152,12 +153,32 @@ void main() {
     expect(
       condition(),
       isTrue,
-      reason: 'state: ${container.read(appControllerProvider).phase}, '
+      reason:
+          'state: ${container.read(appControllerProvider).phase}, '
           'input: ${container.read(appControllerProvider).input}, '
           'message: ${container.read(appControllerProvider).message}',
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('首页品牌图标在浅色和深色主题下使用应用图标', (tester) async {
+    await pumpApp(tester);
+    final icon = find.byKey(const Key('appBrandIcon'));
+    expect(icon, findsOneWidget);
+    expect(
+      (tester.widget<Image>(icon).image as AssetImage).assetName,
+      'assets/branding/app_icon_128.png',
+    );
+
+    await tester.runAsync(
+      () => container
+          .read(appControllerProvider.notifier)
+          .setThemeMode(ThemeMode.dark),
+    );
+    await tester.pumpAndSettle();
+    expect(icon, findsOneWidget);
+    expect(Theme.of(tester.element(icon)).brightness, Brightness.dark);
+  });
 
   testWidgets('输入后自动显示双向译文', (tester) async {
     await pumpApp(tester);
@@ -204,6 +225,24 @@ void main() {
       of: find.text('译文语言'),
       matching: find.byType(TextButton),
     );
+    final languagePanel = find.ancestor(
+      of: sourceButton,
+      matching: find.byType(AppPanel),
+    );
+    final sourceRect = tester.getRect(sourceButton);
+    final swapSlotRect = tester.getRect(
+      find.byKey(const Key('swapLanguageSlot')),
+    );
+    final targetRect = tester.getRect(targetButton);
+    final panelRect = tester.getRect(languagePanel);
+    final swapRect = tester.getRect(find.byTooltip('交换语言'));
+    expect(sourceRect.width, closeTo(swapSlotRect.width, 1));
+    expect(sourceRect.width, closeTo(targetRect.width, 1));
+    expect(
+      sourceRect.width + swapSlotRect.width + targetRect.width,
+      closeTo(panelRect.width, 2),
+    );
+    expect(swapRect.center.dx, closeTo(panelRect.center.dx, 1));
     expect(
       find.descendant(of: sourceButton, matching: find.text('简体中文')),
       findsOneWidget,
@@ -220,7 +259,12 @@ void main() {
 
   testWidgets('模拟翻译、收藏、历史和四个底部入口', (tester) async {
     await pumpApp(tester);
-    expect(find.text('把想说的话，\n翻译得更简单。'), findsOneWidget);
+    expect(find.text('随时翻译 · 轻松记住'), findsNothing);
+    expect(find.text('把想说的话，\n翻译得更简单。'), findsNothing);
+    expect(find.text('历史保存在本机，常用表达随手收藏。'), findsNothing);
+    expect(find.text('语言模型首次使用需下载，之后可在设备端翻译'), findsNothing);
+    expect(find.byType(ActionChip), findsNothing);
+    expect(find.textContaining('由 Google Translate'), findsNothing);
     await tester.enterText(
       find.byKey(const Key('sourceInput')),
       'Hello, world!',
@@ -235,6 +279,7 @@ void main() {
       () => container.read(appControllerProvider).result?.id.isNotEmpty == true,
     );
     expect(find.text('你好，世界！'), findsOneWidget);
+    expect(find.text('演示译文，不代表真实翻译效果'), findsOneWidget);
     await tester.ensureVisible(find.byTooltip('收藏译文'));
     await tester.tap(find.byTooltip('收藏译文'));
     await waitFor(
@@ -536,7 +581,7 @@ void main() {
     await tester.tap(find.byTooltip('朗读原文'));
     await tester.pump();
     expect(speech.calls.single, ('Hello, world!', 'en'));
-    await tester.tap(find.byTooltip('停止朗读'));
+    await tester.tap(find.byTooltip('停止朗读').first);
     await tester.pump();
     expect(speech.stops, 1);
 

@@ -173,27 +173,24 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
     final state = ref.watch(appControllerProvider);
     final controller = ref.read(appControllerProvider.notifier);
     final theme = Theme.of(context);
-    final reversed = state.sourceLanguage != 'auto' &&
+    final reversed =
+        state.sourceLanguage != 'auto' &&
         state.detectedLanguage == state.targetLanguage;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
         title: Row(
           children: [
-            Container(
-              width: 31,
-              height: 31,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '安',
-                style: TextStyle(
-                  color: theme.colorScheme.onPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
+            // 首页品牌图标与 Android、iOS 桌面图标共用同一版设计。
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/branding/app_icon_128.png',
+                key: const Key('appBrandIcon'),
+                width: 31,
+                height: 31,
+                fit: BoxFit.cover,
+                semanticLabel: '小安翻译图标',
               ),
             ),
             const SizedBox(width: 9),
@@ -207,24 +204,6 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
           children: [
-            Text(
-              '随时翻译 · 轻松记住',
-              style: TextStyle(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              '把想说的话，\n翻译得更简单。',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                height: 1.25,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text('历史保存在本机，常用表达随手收藏。', style: theme.textTheme.bodySmall),
-            const SizedBox(height: 18),
             AppPanel(
               child: Row(
                 children: [
@@ -239,10 +218,15 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                       ),
                     ),
                   ),
-                  IconButton(
-                    tooltip: '交换语言',
-                    icon: const Icon(Icons.swap_horiz),
-                    onPressed: controller.swapLanguages,
+                  Expanded(
+                    child: Center(
+                      key: const Key('swapLanguageSlot'),
+                      child: IconButton(
+                        tooltip: '交换语言',
+                        icon: const Icon(Icons.swap_horiz),
+                        onPressed: controller.swapLanguages,
+                      ),
+                    ),
                   ),
                   Expanded(
                     child: _languageButton(
@@ -313,14 +297,14 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                               onPressed: _speaking
                                   ? _stopSpeech
                                   : state.input.trim().isEmpty
-                                      ? null
-                                      : () => _speak(
-                                            state.input,
-                                            state.detectedLanguage ??
-                                                (state.sourceLanguage == 'auto'
-                                                    ? null
-                                                    : state.sourceLanguage),
-                                          ),
+                                  ? null
+                                  : () => _speak(
+                                      state.input,
+                                      state.detectedLanguage ??
+                                          (state.sourceLanguage == 'auto'
+                                              ? null
+                                              : state.sourceLanguage),
+                                    ),
                             ),
                             IconButton(
                               tooltip: '清空输入',
@@ -337,7 +321,8 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
             ),
             const SizedBox(height: 13),
             FilledButton.icon(
-              onPressed: state.input.trim().isEmpty ||
+              onPressed:
+                  state.input.trim().isEmpty ||
                       state.phase.isBusy ||
                       !state.loaded
                   ? null
@@ -353,18 +338,12 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                 state.phase.isBusy
                     ? state.message
                     : state.phase == TranslationPhase.success
-                        ? '重新翻译'
-                        : '开始翻译',
+                    ? '重新翻译'
+                    : '开始翻译',
               ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(51),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '语言模型首次使用需下载，之后可在设备端翻译',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.labelSmall,
             ),
             if (state.phase == TranslationPhase.error &&
                 state.failure != TranslationFailure.unsupportedLanguage &&
@@ -380,31 +359,6 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                   child: const Text('允许移动网络下载'),
                 ),
             ],
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final sample in [
-                    'Hello, world!',
-                    'Good morning',
-                    '谢谢你的帮助',
-                    'How are you?',
-                  ])
-                    Padding(
-                      padding: const EdgeInsets.only(right: 7),
-                      child: ActionChip(
-                        label: Text(sample),
-                        onPressed: () {
-                          controller.setSourceLanguage('en');
-                          controller.setTargetLanguage('zh');
-                          _onInputChanged(sample);
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            ),
             const SizedBox(height: 13),
             AppPanel(
               tinted: true,
@@ -441,6 +395,13 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                         ),
                       ),
                     ),
+                    if (state.result != null)
+                      Text(
+                        state.result!.engine == 'demo'
+                            ? '演示译文，不代表真实翻译效果'
+                            : '由 Google Translate 提供支持 · 译文仅供参考',
+                        style: theme.textTheme.labelSmall,
+                      ),
                     Divider(color: theme.colorScheme.outlineVariant),
                     Row(
                       children: [
@@ -460,15 +421,16 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                           onPressed: _speaking
                               ? _stopSpeech
                               : state.result == null
-                                  ? null
-                                  : () => _speak(
-                                        state.result!.translatedText,
-                                        state.result!.targetLanguage,
-                                      ),
+                              ? null
+                              : () => _speak(
+                                  state.result!.translatedText,
+                                  state.result!.targetLanguage,
+                                ),
                         ),
                         IconButton(
-                          tooltip:
-                              state.result?.favorite == true ? '取消收藏' : '收藏译文',
+                          tooltip: state.result?.favorite == true
+                              ? '取消收藏'
+                              : '收藏译文',
                           onPressed: state.result?.id.isNotEmpty == true
                               ? () => controller.toggleFavorite(state.result!)
                               : null,
@@ -508,13 +470,6 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              state.result?.engine == 'demo'
-                  ? '这条记录来自演示译文，不代表真实翻译效果。'
-                  : '由 Google Translate 提供支持。设备端译文仅供参考，请核对重要内容。',
-              style: theme.textTheme.labelSmall,
             ),
           ],
         ),
