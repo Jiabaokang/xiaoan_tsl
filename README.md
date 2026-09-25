@@ -29,7 +29,10 @@ flutter build apk --debug
 adb install -r build/app/outputs/flutter-apk/app-debug.apk
 flutter build apk --release
 adb install -r build/app/outputs/flutter-apk/app-release.apk
+flutter build appbundle --release
 ```
+
+上架 Google Play 时使用 AAB。`flutter build appbundle --release` 默认包含 ARM 32 位、ARM 64 位和 x86-64 架构，Google Play 会按设备分发合适的 APK，无需指定 `--target-platform android-arm64`。`--split-per-abi` 仅用于构建按架构拆分的 APK，不用于 AAB。
 
 Release 构建需本地 `android/key.properties` 与签名证书；这些文件已忽略，不提交仓库。debug 与 Release 覆盖安装需保持相同应用 ID 和签名。真机调试必须遵守 [AGENTS.md](AGENTS.md) 的覆盖安装规则。
 

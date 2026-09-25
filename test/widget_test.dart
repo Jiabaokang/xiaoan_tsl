@@ -412,10 +412,11 @@ void main() {
     expect(find.textContaining('Google ML Kit'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('隐私说明'));
+    await tester.tap(find.text('隐私政策'));
     await tester.pumpAndSettle();
     expect(find.textContaining('关闭系统备份'), findsOneWidget);
     expect(find.textContaining('不申请麦克风'), findsOneWidget);
+    expect(find.text('https://jbksy.cn/xiaoan-privacy.html'), findsOneWidget);
   });
 
   testWidgets('历史记录可单条删除', (tester) async {

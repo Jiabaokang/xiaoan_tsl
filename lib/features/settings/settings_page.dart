@@ -80,7 +80,7 @@ class SettingsPage extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
-            title: const Text('隐私说明'),
+            title: const Text('隐私政策'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/privacy'),
           ),

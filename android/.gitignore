@@ -11,3 +11,4 @@ key.properties
 **/*.keystore
 **/*.jks
 .kotlin/
+key_sign/

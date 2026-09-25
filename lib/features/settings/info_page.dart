@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+// 公开政策与 Google Play 商店列表使用同一地址。
+const privacyPolicyUrl = 'https://jbksy.cn/xiaoan-privacy.html';
 
 // 设置页说明内容的类型。
 enum InfoKind { privacy, about }
@@ -12,7 +16,7 @@ class InfoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = kind == InfoKind.privacy ? '隐私说明' : '关于小安翻译';
+    final title = kind == InfoKind.privacy ? '隐私政策' : '关于小安翻译';
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: ListView(
@@ -28,6 +32,12 @@ class InfoPage extends StatelessWidget {
                 Text('朗读由设备安装的语音引擎处理；复制或分享后，文字由你选择的系统功能或第三方应用处理。'),
                 SizedBox(height: 14),
                 Text('应用不申请麦克风、相机、位置或通讯录权限。'),
+                SizedBox(height: 14),
+                Text(
+                  'Google ML Kit 可能向 Google 发送设备、应用及性能等诊断数据；完整的数据处理与删除说明请查看公开隐私政策。',
+                ),
+                SizedBox(height: 14),
+                _PrivacyPolicyLink(),
               ]
             : [
                 const Text('小安翻译使用设备端语言识别、翻译和系统语音朗读。'),
@@ -46,4 +56,34 @@ class InfoPage extends StatelessWidget {
       ),
     );
   }
+}
+
+// 点击后用系统浏览器打开公开的完整隐私政策。
+class _PrivacyPolicyLink extends StatelessWidget {
+  const _PrivacyPolicyLink();
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerLeft,
+    child: TextButton(
+      onPressed: () async {
+        try {
+          if (await launchUrl(
+            Uri.parse(privacyPolicyUrl),
+            mode: LaunchMode.externalApplication,
+          )) {
+            return;
+          }
+        } catch (_) {
+          // 无浏览器或系统拒绝打开时，向用户显示可复制的网址。
+        }
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('无法打开网页，请在浏览器输入页面上的网址')));
+        }
+      },
+      child: const Text(privacyPolicyUrl),
+    ),
+  );
 }
