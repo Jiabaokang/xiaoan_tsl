@@ -51,6 +51,20 @@
 - [ ] 5.2 Google Play Closed Testing 测试配置（需开发者账号拥有者配合）
   - **待办**：在 Play Console 配置 Closed Testing 轨道，邀请 12 名测试人员开始 14 天测试流程。
 
+### 阶段六：国际化多语言支持（V1-10）
+- [x] 6.1 中英文多语言架构与基类实现
+  - **目标文件**：`lib/l10n/app_localizations.dart`、`pubspec.yaml`
+  - **验收结果**：接入 `flutter_localizations` 与 `intl`，定义双语契约与 `context.l10n` 语法糖，映射语言展示名称。
+- [x] 6.2 语言模式状态持久化与系统跟随
+  - **目标文件**：`lib/features/translate/app_controller.dart`、`lib/app.dart`
+  - **验收结果**：支持 `system` / `zh` / `en`，通过本地存储持久化；应用入口支持 `localeListResolutionCallback` 自适应解析。
+- [x] 6.3 全量页面硬编码抽取与设置页切换交互
+  - **目标文件**：首页、设置、历史与收藏、语言选择、离线模型、关于等页面
+  - **验收结果**：所有界面文字抽离至 Localizations，设置页增加语言切换弹窗，即时切换。
+- [x] 6.4 自动化测试补充与真机验证
+  - **目标文件**：`test/widget_test.dart`
+  - **验收结果**：新增系统语言跟随与手动切换、持久化恢复及返回导航兼容测试，全量 42 项自动化测试 100% 通过。
+
 ### 2026-09-25 真机问题修复
 
 - [x] OnePlus 9（Android 14）上短文本 `Hello` 曾被五字符识别门槛拦截；已选原文语言时识别不确定会使用所选语言。修复后的 debug 与 Release 均自动译出“你好”。
@@ -64,6 +78,6 @@
 当前工程已通过以下验证：
 1. `dart format lib test`：代码格式规范；
 2. `flutter analyze`：**0 warning, 0 error**；
-3. `flutter test`：**全量 39 项单元/组件/状态机测试通过**；
+3. `flutter test`：**全量 42 项单元/组件/状态机测试通过**；
 4. `flutter build apk --debug`：构建成功，并在真实 Android 实体机覆盖安装验证；
 5. `flutter build apk --release`：构建成功，并在 OnePlus 9 覆盖安装验证短文本翻译及两种语言列表；先前构建的 AAB 尚未按本次修复重新验证。

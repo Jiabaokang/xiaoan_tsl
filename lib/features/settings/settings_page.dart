@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:xiaoan_tsl/features/translate/app_controller.dart';
-import 'package:xiaoan_tsl/features/language/app_languages.dart';
+import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 
-// 本地偏好和应用信息的第四个底部入口。
+// 本地偏好、应用信息及国际化语言设置的第四个底部入口。
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -13,31 +13,43 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(appControllerProvider);
     final controller = ref.read(appControllerProvider.notifier);
+    final l10n = context.l10n;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
+        padding: const EdgeInsets.only(bottom: 48),
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(18, 14, 18, 4),
-            child: Text('翻译偏好'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
+            child: Text(l10n.translationPreferencesSection),
           ),
           ListTile(
             leading: const Icon(Icons.translate),
-            title: const Text('默认目标语言'),
-            subtitle: Text(appLanguages[state.defaultTargetLanguage] ?? '简体中文'),
+            title: Text(l10n.defaultTargetLanguage),
+            subtitle: Text(l10n.languageName(state.defaultTargetLanguage)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/languages?mode=default-target'),
           ),
           ListTile(
             leading: const Icon(Icons.dark_mode_outlined),
-            title: const Text('外观模式'),
+            title: Text(l10n.themeModeLabel),
             trailing: DropdownButton<ThemeMode>(
               value: state.themeMode,
               underline: const SizedBox.shrink(),
-              items: const [
-                DropdownMenuItem(value: ThemeMode.system, child: Text('跟随系统')),
-                DropdownMenuItem(value: ThemeMode.light, child: Text('浅色')),
-                DropdownMenuItem(value: ThemeMode.dark, child: Text('深色')),
+              items: [
+                DropdownMenuItem(
+                  value: ThemeMode.system,
+                  child: Text(l10n.themeModeSystem),
+                ),
+                DropdownMenuItem(
+                  value: ThemeMode.light,
+                  child: Text(l10n.themeModeLight),
+                ),
+                DropdownMenuItem(
+                  value: ThemeMode.dark,
+                  child: Text(l10n.themeModeDark),
+                ),
               ],
               onChanged: (mode) {
                 if (mode != null) controller.setThemeMode(mode);
@@ -45,32 +57,87 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.language_outlined),
+            title: Text(l10n.appLanguageLabel),
+            subtitle: Text(
+              switch (state.localeMode) {
+                'zh' => l10n.languageZh,
+                'en' => l10n.languageEn,
+                _ => l10n.languageSystem,
+              },
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              final selected = await showDialog<String>(
+                context: context,
+                builder: (dialogContext) => SimpleDialog(
+                  title: Text(l10n.appLanguageLabel),
+                  children: [
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(dialogContext, 'system'),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(l10n.languageSystem)),
+                          if (state.localeMode == 'system')
+                            const Icon(Icons.check, size: 20),
+                        ],
+                      ),
+                    ),
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(dialogContext, 'zh'),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(l10n.languageZh)),
+                          if (state.localeMode == 'zh')
+                            const Icon(Icons.check, size: 20),
+                        ],
+                      ),
+                    ),
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(dialogContext, 'en'),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(l10n.languageEn)),
+                          if (state.localeMode == 'en')
+                            const Icon(Icons.check, size: 20),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (selected != null) {
+                await controller.setLocaleMode(selected);
+              }
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.download_outlined),
-            title: const Text('离线语言包'),
-            subtitle: const Text('查看、下载或删除设备端模型'),
+            title: Text(l10n.offlineModelsLabel),
+            subtitle: Text(l10n.offlineModelsSubtitle),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/offline-models'),
           ),
           const Divider(),
           ListTile(
             leading: const Icon(Icons.delete_outline),
-            title: const Text('清空翻译历史'),
+            title: Text(l10n.clearHistoryLabel),
             onTap: state.records.isEmpty
                 ? null
                 : () async {
                     final confirmed = await showDialog<bool>(
                       context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('清空翻译历史？'),
-                        content: const Text('收藏也会一并删除，此操作无法撤销。'),
+                      builder: (dialogContext) => AlertDialog(
+                        title: Text(l10n.clearHistoryDialogTitle),
+                        content: Text(l10n.clearHistoryDialogContent),
                         actions: [
                           TextButton(
-                            onPressed: () => context.pop(false),
-                            child: const Text('取消'),
+                            onPressed: () => dialogContext.pop(false),
+                            child: Text(l10n.cancel),
                           ),
                           TextButton(
-                            onPressed: () => context.pop(true),
-                            child: const Text('清空'),
+                            onPressed: () => dialogContext.pop(true),
+                            child: Text(l10n.clearHistoryConfirm),
                           ),
                         ],
                       ),
@@ -80,13 +147,13 @@ class SettingsPage extends ConsumerWidget {
           ),
           ListTile(
             leading: const Icon(Icons.privacy_tip_outlined),
-            title: const Text('隐私政策'),
+            title: Text(l10n.privacyPolicyLabel),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/privacy'),
           ),
           ListTile(
             leading: const Icon(Icons.info_outline),
-            title: const Text('关于小安翻译'),
+            title: Text(l10n.aboutAppLabel),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/about'),
           ),

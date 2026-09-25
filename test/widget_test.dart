@@ -137,6 +137,8 @@ void main() {
   });
 
   Future<void> pumpApp(WidgetTester tester) async {
+    tester.platformDispatcher.localesTestValue = const [Locale('zh', 'CN')];
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
     await tester.pumpWidget(
       UncontrolledProviderScope(container: container, child: const XiaoanApp()),
     );
@@ -153,8 +155,7 @@ void main() {
     expect(
       condition(),
       isTrue,
-      reason:
-          'state: ${container.read(appControllerProvider).phase}, '
+      reason: 'state: ${container.read(appControllerProvider).phase}, '
           'input: ${container.read(appControllerProvider).input}, '
           'message: ${container.read(appControllerProvider).message}',
     );
@@ -402,15 +403,19 @@ void main() {
       tester,
       () => find.textContaining('模型状态来自设备').evaluate().isNotEmpty,
     );
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.text('清空翻译历史'), findsOneWidget);
 
+    await tester.drag(find.byType(ListView).last, const Offset(0, -100));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('关于小安翻译'));
     await tester.pumpAndSettle();
     expect(find.text('版本 1.0.0 (1)'), findsOneWidget);
     expect(find.textContaining('Google ML Kit'), findsOneWidget);
-    await tester.pageBack();
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView).last, const Offset(0, -100));
     await tester.pumpAndSettle();
     await tester.tap(find.text('隐私政策'));
     await tester.pumpAndSettle();
@@ -686,5 +691,115 @@ void main() {
     expect(container.read(appControllerProvider).defaultTargetLanguage, 'en');
     expect(container.read(appControllerProvider).themeMode, ThemeMode.light);
     expect(container.read(appControllerProvider).targetLanguage, 'en');
+  });
+
+  testWidgets('跟随系统语言：系统语言为英文时自动显示英文界面，为中文时自动显示中文界面', (
+    tester,
+  ) async {
+    // 模拟系统语言为英文
+    tester.platformDispatcher.localesTestValue = const [Locale('en', 'US')];
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const XiaoanApp()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Translate'), findsWidgets);
+    expect(find.text('History'), findsOneWidget);
+    expect(find.text('Favorites'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Source Language'), findsOneWidget);
+    expect(find.text('Target Language'), findsOneWidget);
+    expect(find.text('Ready to translate'), findsOneWidget);
+
+    // 切换系统语言为中文
+    tester.platformDispatcher.localesTestValue = const [Locale('zh', 'CN')];
+    await tester.pumpAndSettle();
+
+    expect(find.text('翻译'), findsWidgets);
+    expect(find.text('历史'), findsOneWidget);
+    expect(find.text('收藏'), findsOneWidget);
+    expect(find.text('设置'), findsOneWidget);
+    expect(find.text('原文语言'), findsOneWidget);
+    expect(find.text('译文语言'), findsOneWidget);
+    expect(find.text('等待翻译'), findsOneWidget);
+  });
+
+  testWidgets('设置中手动切换应用语言为英文与中文', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.text('设置').last);
+    await tester.pumpAndSettle();
+    expect(find.text('应用语言'), findsOneWidget);
+    expect(find.text('跟随系统语言'), findsOneWidget);
+
+    // 打开语言选择弹窗并选择英文
+    await tester.tap(find.text('应用语言'));
+    await tester.pumpAndSettle();
+    expect(find.text('English'), findsOneWidget);
+    await tester.tap(find.text('English'));
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).localeMode == 'en',
+    );
+
+    // 验证界面已即时变为英文
+    expect(container.read(appControllerProvider).localeMode, 'en');
+    expect(find.text('Settings'), findsWidgets);
+    expect(find.text('Translation Preferences'), findsOneWidget);
+    expect(find.text('App Language'), findsOneWidget);
+
+    // 再次打开语言弹窗并切换回简体中文
+    await tester.tap(find.text('App Language'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('简体中文'));
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).localeMode == 'zh',
+    );
+
+    // 验证界面恢复为中文
+    expect(container.read(appControllerProvider).localeMode, 'zh');
+    expect(find.text('设置'), findsWidgets);
+    expect(find.text('翻译偏好'), findsOneWidget);
+    expect(find.text('应用语言'), findsOneWidget);
+  });
+
+  testWidgets('应用语言偏好在重建后持久化恢复', (tester) async {
+    await pumpApp(tester);
+    final controller = container.read(appControllerProvider.notifier);
+    await tester.runAsync(() => controller.setLocaleMode('en'));
+    await tester.pumpAndSettle();
+    expect(container.read(appControllerProvider).localeMode, 'en');
+
+    // 模拟应用重启，重新读取 LocalStore
+    await tester.pumpWidget(const SizedBox.shrink());
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        translationServiceProvider.overrideWithValue(DemoTranslationService()),
+        languageDetectionProvider.overrideWithValue(
+          TestLanguageDetectionService(),
+        ),
+        translationModelProvider.overrideWithValue(
+          DownloadedTranslationModels(),
+        ),
+      ],
+    );
+    await tester.runAsync(
+      () => container.read(appControllerProvider.notifier).initialize(),
+    );
+    expect(container.read(appControllerProvider).localeMode, 'en');
+    expect(container.read(appControllerProvider).locale, const Locale('en'));
+
+    // 再次在英文状态下启动应用，验证初始界面直接为英文
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: container, child: const XiaoanApp()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Translate'), findsWidgets);
+    expect(find.text('Settings'), findsOneWidget);
   });
 }

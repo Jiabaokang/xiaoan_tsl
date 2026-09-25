@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xiaoan_tsl/core/database/database_provider.dart';
 import 'package:xiaoan_tsl/features/history/history_store.dart';
 import 'package:xiaoan_tsl/features/language/app_languages.dart';
+import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 import 'package:xiaoan_tsl/services/language/language_detection_provider.dart';
 import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
@@ -49,6 +50,7 @@ class AppState {
     this.message = '等待翻译',
     this.records = const [],
     this.themeMode = ThemeMode.system,
+    this.localeMode = 'system',
     this.loaded = false,
   });
 
@@ -63,7 +65,40 @@ class AppState {
   final String message;
   final List<TranslationRecord> records;
   final ThemeMode themeMode;
+  final String localeMode;
   final bool loaded;
+
+  // 根据当前 localeMode 获取 Flutter 实体 Locale（null 代表跟随系统）。
+  Locale? get locale => switch (localeMode) {
+        'zh' => const Locale('zh'),
+        'en' => const Locale('en'),
+        _ => null,
+      };
+
+  // 根据当前国际化上下文返回对应的阶段或错误文案。
+  String localizedMessage(AppLocalizations l10n) => switch (phase) {
+        TranslationPhase.idle => l10n.phaseReady,
+        TranslationPhase.detecting => l10n.phaseDetecting,
+        TranslationPhase.checkingModel => l10n.phaseCheckingModel,
+        TranslationPhase.downloadingModel => l10n.phaseDownloadingModel,
+        TranslationPhase.translating => l10n.phaseTranslating,
+        TranslationPhase.success => l10n.phaseSuccess,
+        TranslationPhase.error => switch (failure) {
+            TranslationFailure.detection => l10n.errorDetection,
+            TranslationFailure.unsupportedLanguage => message == '最多输入 5000 个字符'
+                ? l10n.errorMaxChars
+                : (message == '请先翻译或手动选择原文语言'
+                    ? l10n.errorSwapLanguage
+                    : l10n.errorUnsupportedLang),
+            TranslationFailure.modelCheck => l10n.errorModelCheck,
+            TranslationFailure.modelDownload => l10n.errorModelDownload,
+            TranslationFailure.translation => l10n.errorTranslation,
+            TranslationFailure.storage => message == '无法将结果写入历史'
+                ? l10n.errorStorageSave
+                : l10n.errorStorage,
+            TranslationFailure.none => message,
+          },
+      };
 
   static const _unchanged = Object();
 
@@ -79,6 +114,7 @@ class AppState {
     String? message,
     List<TranslationRecord>? records,
     ThemeMode? themeMode,
+    String? localeMode,
     bool? loaded,
   }) =>
       AppState(
@@ -98,6 +134,7 @@ class AppState {
         message: message ?? this.message,
         records: records ?? this.records,
         themeMode: themeMode ?? this.themeMode,
+        localeMode: localeMode ?? this.localeMode,
         loaded: loaded ?? this.loaded,
       );
 }
@@ -124,6 +161,7 @@ class AppController extends Notifier<AppState> {
       final store = ref.read(localStoreProvider);
       final target = await store.getSetting('default_target') ?? 'zh';
       final themeName = await store.getSetting('theme_mode') ?? 'system';
+      final localeMode = await store.getSetting('locale_mode') ?? 'system';
       final records = await store.search('');
       if (!ref.mounted) return;
       final theme = ThemeMode.values.where((mode) => mode.name == themeName);
@@ -134,6 +172,7 @@ class AppController extends Notifier<AppState> {
         targetLanguage: target,
         defaultTargetLanguage: target,
         themeMode: theme.isEmpty ? ThemeMode.system : theme.first,
+        localeMode: localeMode,
         records: records,
         loaded: true,
       );
@@ -209,6 +248,12 @@ class AppController extends Notifier<AppState> {
   Future<void> setThemeMode(ThemeMode mode) async {
     await ref.read(localStoreProvider).setSetting('theme_mode', mode.name);
     if (ref.mounted) state = state.copyWith(themeMode: mode);
+  }
+
+  // 切换并持久化界面语言偏好（'system', 'zh', 'en'）。
+  Future<void> setLocaleMode(String mode) async {
+    await ref.read(localStoreProvider).setSetting('locale_mode', mode);
+    if (ref.mounted) state = state.copyWith(localeMode: mode);
   }
 
   bool swapLanguages() {

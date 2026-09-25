@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:xiaoan_tsl/features/language/app_languages.dart';
 import 'package:xiaoan_tsl/features/translate/app_controller.dart';
+import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/translate_language_code.dart';
-
-import 'app_languages.dart';
 
 // 从 ML Kit 读取实时模型状态，提供下载与删除操作。
 class OfflineModelsPage extends ConsumerStatefulWidget {
@@ -47,6 +47,7 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
     bool wifiOnly = true,
   }) async {
     if (_operatingCode != null) return;
+    final l10n = context.l10n;
     setState(() {
       _operatingCode = code;
       _error = null;
@@ -69,26 +70,27 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
       setState(() {
         _operatingCode = null;
         _failedDownloadCode = remove ? null : code;
-        _error = remove ? '删除语言模型失败，请重试' : '下载语言模型失败，请检查网络后重试';
+        _error = remove ? l10n.deleteModelFailed : l10n.downloadModelFailed;
       });
     }
   }
 
   // 蜂窝网络下载需要用户明确确认，且只对本次操作生效。
   Future<void> _downloadWithMobileData(String code) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('使用移动网络下载模型？'),
-        content: const Text('语言模型可能占用较多流量。仅本次下载允许使用移动网络。'),
+        title: Text(l10n.mobileDownloadDialogTitle),
+        content: Text(l10n.mobileDownloadDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('继续下载'),
+            child: Text(l10n.continueDownload),
           ),
         ],
       ),
@@ -103,8 +105,10 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
     final translating = ref.watch(
       appControllerProvider.select((state) => state.phase.isBusy),
     );
+    final l10n = context.l10n;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('离线语言包')),
+      appBar: AppBar(title: Text(l10n.offlineModelsLabel)),
       body: SafeArea(
         child: FutureBuilder<Map<String, bool>>(
           future: _status,
@@ -114,8 +118,11 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('无法读取离线模型状态'),
-                    TextButton(onPressed: _refresh, child: const Text('重试查询')),
+                    Text(l10n.cannotReadStatus),
+                    TextButton(
+                      onPressed: _refresh,
+                      child: Text(l10n.retryQuery),
+                    ),
                   ],
                 ),
               );
@@ -127,9 +134,9 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child: Text('模型状态来自设备。首次下载默认仅使用 Wi-Fi，下载后可离线翻译。'),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(l10n.offlineModelsPageNotice),
                 ),
                 if (_error != null) ...[
                   Text(
@@ -142,14 +149,18 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
                     TextButton(
                       onPressed: () =>
                           _downloadWithMobileData(_failedDownloadCode!),
-                      child: const Text('允许移动网络下载'),
+                      child: Text(l10n.allowMobileDownload),
                     ),
                 ],
                 for (final entry in status.entries)
                   ListTile(
                     key: Key('model_${entry.key}'),
-                    title: Text(appLanguages[entry.key] ?? entry.key),
-                    subtitle: Text(entry.value ? '已下载' : '未下载'),
+                    title: Text(l10n.languageName(entry.key)),
+                    subtitle: Text(
+                      entry.value
+                          ? l10n.statusDownloaded
+                          : l10n.statusNotDownloaded,
+                    ),
                     trailing: _operatingCode == entry.key
                         ? const SizedBox(
                             width: 20,
@@ -162,14 +173,14 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
                                 onPressed: translating || _operatingCode != null
                                     ? null
                                     : () => _operate(entry.key, remove: true),
-                                child: const Text('删除'),
+                                child: Text(l10n.deleteAction),
                               )
                             : FilledButton.tonal(
                                 key: Key('download_${entry.key}'),
                                 onPressed: translating || _operatingCode != null
                                     ? null
                                     : () => _operate(entry.key, remove: false),
-                                child: const Text('下载'),
+                                child: Text(l10n.downloadAction),
                               ),
                   ),
               ],

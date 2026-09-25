@@ -30,6 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
   path_provider: ^2.1.5
   # ponytail: 11.1 可通过当前构建；Flutter 强制内建 Kotlin 时再升级插件。
   share_plus: ^11.1.0

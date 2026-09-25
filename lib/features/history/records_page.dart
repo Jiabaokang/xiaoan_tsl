@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:xiaoan_tsl/features/translate/app_controller.dart';
-import 'package:xiaoan_tsl/features/language/app_languages.dart';
 import 'package:xiaoan_tsl/core/database/database_provider.dart';
 import 'package:xiaoan_tsl/features/history/history_store.dart';
+import 'package:xiaoan_tsl/features/translate/app_controller.dart';
+import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 
 // 历史与收藏复用同一列表，只由查询条件区分。
 class RecordsPage extends ConsumerStatefulWidget {
@@ -51,8 +51,13 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
       (previous, next) => _refresh(),
     );
     final controller = ref.read(appControllerProvider.notifier);
+    final l10n = context.l10n;
+
     return Scaffold(
-      appBar: AppBar(title: Text(widget.favoritesOnly ? '我的收藏' : '翻译历史')),
+      appBar: AppBar(
+        title: Text(
+            widget.favoritesOnly ? l10n.favoritesTitle : l10n.recordsTitle),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
         children: [
@@ -60,7 +65,9 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
             controller: _search,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
-              hintText: widget.favoritesOnly ? '搜索收藏' : '搜索原文或译文',
+              hintText: widget.favoritesOnly
+                  ? l10n.searchFavoritesHint
+                  : l10n.searchRecordsHint,
               border: const OutlineInputBorder(),
             ),
             onChanged: (_) => _refresh(),
@@ -70,7 +77,7 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
             future: _results,
             builder: (context, snapshot) {
               if (snapshot.hasError) {
-                return const ListTile(title: Text('读取记录失败，请重试'));
+                return ListTile(title: Text(l10n.readRecordsFailed));
               }
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
@@ -80,10 +87,10 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
                 return ListTile(
                   title: Text(
                     _search.text.isNotEmpty
-                        ? '没有找到相关记录'
+                        ? l10n.noRecordsFound
                         : widget.favoritesOnly
-                            ? '还没有收藏'
-                            : '还没有翻译记录',
+                            ? l10n.emptyFavorites
+                            : l10n.emptyRecords,
                   ),
                 );
               }
@@ -114,14 +121,16 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '${appLanguages[record.sourceLanguage] ?? record.sourceLanguage} → ${appLanguages[record.targetLanguage] ?? record.targetLanguage} · ${record.engine == 'mlkit' ? '设备端记录' : '演示记录'}',
+                                    '${l10n.languageName(record.sourceLanguage)} → ${l10n.languageName(record.targetLanguage)} · ${record.engine == 'mlkit' ? l10n.onDeviceRecord : l10n.demoRecord}',
                                     style: Theme.of(
                                       context,
                                     ).textTheme.labelSmall,
                                   ),
                                 ),
                                 IconButton(
-                                  tooltip: record.favorite ? '取消收藏' : '收藏',
+                                  tooltip: record.favorite
+                                      ? l10n.unfavoriteTooltip
+                                      : l10n.favoriteTooltip,
                                   onPressed: () =>
                                       controller.toggleFavorite(record),
                                   icon: Icon(
@@ -131,7 +140,7 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
                                   ),
                                 ),
                                 IconButton(
-                                  tooltip: '删除记录',
+                                  tooltip: l10n.deleteRecordTooltip,
                                   onPressed: () =>
                                       controller.deleteRecord(record.id),
                                   icon: const Icon(Icons.delete_outline),

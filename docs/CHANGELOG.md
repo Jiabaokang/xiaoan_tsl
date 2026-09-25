@@ -2,6 +2,12 @@
 
 每次提交涉及 `docs/`、`AGENTS.md` 或根目录 `README.md` 的修改时，在顶部新增一条记录。一个提交或一批相关修改写一条；日期使用本地日期，说明修改内容、原因和相关文件。Git 历史保留逐行差异，本文件方便按时间查找文档变更。
 
+## 2026-09-26 — 支持中文与英文国际化多语言及跟随系统语言
+
+- 架构设计与状态持久化：引入 `flutter_localizations` 与 `intl`，定义 [AppLocalizations](file:///Users/jiabaokang/AndroidDeveloper/FlutterProject/xiaoan_tsl/lib/l10n/app_localizations.dart) 契约及中英文实现；在 `AppState` / `AppController` 中增加 `localeMode` 支持跟随系统（`system`）、简体中文（`zh`）和英文（`en`），并通过本地轻量存储持久化偏好。
+- 全量页面硬编码抽取与国际化适配：在 `MaterialApp.router` 配置中英文委托与智能系统语种解析；底部导航栏、翻译首页、设置页、历史记录与收藏、离线语言包、语言选择列表及关于/隐私政策页面全量接入 `context.l10n`。设置页新增应用语言切换弹窗，支持即时动态切换。
+- 验证：全量 42 项自动化测试通过（覆盖系统跟随、手动切换、持久化和返回导航适配），`flutter analyze` 零警告零错误。
+
 ## 2026-09-25 — 补充隐私政策外链与 Google Play AAB 构建说明
 
 - 更新 [README](../README.md) 的 Android 打包说明：补充 AAB 构建命令，说明默认架构与 Google Play 按设备分发方式，避免将 APK 的 `--split-per-abi` 参数用于 AAB。

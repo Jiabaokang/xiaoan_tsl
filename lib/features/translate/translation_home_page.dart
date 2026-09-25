@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:xiaoan_tsl/core/widgets/app_panel.dart';
 import 'package:xiaoan_tsl/features/translate/app_controller.dart';
-import 'package:xiaoan_tsl/features/language/app_languages.dart';
+import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 import 'package:xiaoan_tsl/services/sharing/sharing_service.dart';
 import 'package:xiaoan_tsl/services/speech/speech_service_provider.dart';
 import 'package:xiaoan_tsl/services/speech/tts_service.dart';
@@ -86,8 +86,9 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
 
   // 新朗读请求先停止旧语音，完成回调只允许更新当前请求。
   Future<void> _speak(String text, String? languageCode) async {
+    final l10n = context.l10n;
     if (languageCode == null || languageCode == 'auto') {
-      _notice('请先选择原文语言，或完成一次翻译');
+      _notice(l10n.selectLanguageFirstNotice);
       return;
     }
     final request = ++_speechRequest;
@@ -102,8 +103,8 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
       if (mounted && request == _speechRequest) {
         _notice(
           error is UnsupportedError
-              ? error.message ?? '当前语言无法朗读'
-              : '朗读失败，请检查设备语音服务',
+              ? error.message ?? l10n.cannotSpeakNotice
+              : l10n.ttsFailedNotice,
         );
       }
     } finally {
@@ -114,30 +115,32 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
   }
 
   Future<void> _stopSpeech() async {
+    final l10n = context.l10n;
     ++_speechRequest;
     setState(() => _speaking = false);
     try {
       await _activeSpeech?.stop();
     } catch (_) {
-      if (mounted) _notice('停止朗读失败');
+      if (mounted) _notice(l10n.stopSpeechFailedNotice);
     }
   }
 
   // 用户确认流量提示后，才允许本次模型下载使用移动网络。
   Future<void> _retryWithMobileData() async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('使用移动网络下载模型？'),
-        content: const Text('语言模型可能占用较多流量。仅本次下载允许使用移动网络。'),
+        title: Text(l10n.mobileDownloadDialogTitle),
+        content: Text(l10n.mobileDownloadDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('继续下载'),
+            child: Text(l10n.continueDownload),
           ),
         ],
       ),
@@ -173,9 +176,10 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
     final state = ref.watch(appControllerProvider);
     final controller = ref.read(appControllerProvider.notifier);
     final theme = Theme.of(context);
-    final reversed =
-        state.sourceLanguage != 'auto' &&
+    final l10n = context.l10n;
+    final reversed = state.sourceLanguage != 'auto' &&
         state.detectedLanguage == state.targetLanguage;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
@@ -190,13 +194,14 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                 width: 31,
                 height: 31,
                 fit: BoxFit.cover,
-                semanticLabel: '小安翻译图标',
+                semanticLabel: l10n.brandIconSemantics,
               ),
             ),
             const SizedBox(width: 9),
-            const Text('小安翻译', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.appName,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(width: 8),
-            Text('测试版', style: theme.textTheme.labelSmall),
+            Text(l10n.betaBadge, style: theme.textTheme.labelSmall),
           ],
         ),
       ),
@@ -209,7 +214,7 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                 children: [
                   Expanded(
                     child: _languageButton(
-                      '原文语言',
+                      l10n.sourceLanguageLabel,
                       reversed ? state.targetLanguage : state.sourceLanguage,
                       () => context.push(
                         reversed
@@ -222,7 +227,7 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                     child: Center(
                       key: const Key('swapLanguageSlot'),
                       child: IconButton(
-                        tooltip: '交换语言',
+                        tooltip: l10n.swapLanguagesTooltip,
                         icon: const Icon(Icons.swap_horiz),
                         onPressed: controller.swapLanguages,
                       ),
@@ -230,7 +235,7 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                   ),
                   Expanded(
                     child: _languageButton(
-                      '译文语言',
+                      l10n.targetLanguageLabel,
                       reversed ? state.sourceLanguage : state.targetLanguage,
                       () => context.push(
                         reversed
@@ -252,14 +257,16 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          '输入文字',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        Text(
+                          l10n.inputTextLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         Text(
                           state.detectedLanguage == null
-                              ? '等待输入'
-                              : '检测为 ${appLanguages[state.detectedLanguage] ?? state.detectedLanguage}',
+                              ? l10n.waitingForInput
+                              : l10n.detectedAs(
+                                  l10n.languageName(state.detectedLanguage!),
+                                ),
                           style: theme.textTheme.labelSmall,
                         ),
                       ],
@@ -270,8 +277,8 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                       maxLength: 5000,
                       minLines: 2,
                       maxLines: 5,
-                      decoration: const InputDecoration(
-                        hintText: '在这里输入要翻译的内容…',
+                      decoration: InputDecoration(
+                        hintText: l10n.inputHint,
                         border: InputBorder.none,
                         counterText: '',
                       ),
@@ -288,7 +295,9 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              tooltip: _speaking ? '停止朗读' : '朗读原文',
+                              tooltip: _speaking
+                                  ? l10n.stopSpeakingTooltip
+                                  : l10n.readSourceTooltip,
                               icon: Icon(
                                 _speaking
                                     ? Icons.stop
@@ -297,17 +306,17 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                               onPressed: _speaking
                                   ? _stopSpeech
                                   : state.input.trim().isEmpty
-                                  ? null
-                                  : () => _speak(
-                                      state.input,
-                                      state.detectedLanguage ??
-                                          (state.sourceLanguage == 'auto'
-                                              ? null
-                                              : state.sourceLanguage),
-                                    ),
+                                      ? null
+                                      : () => _speak(
+                                            state.input,
+                                            state.detectedLanguage ??
+                                                (state.sourceLanguage == 'auto'
+                                                    ? null
+                                                    : state.sourceLanguage),
+                                          ),
                             ),
                             IconButton(
-                              tooltip: '清空输入',
+                              tooltip: l10n.clearInputTooltip,
                               icon: const Icon(Icons.close),
                               onPressed: () => _onInputChanged(''),
                             ),
@@ -321,8 +330,7 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
             ),
             const SizedBox(height: 13),
             FilledButton.icon(
-              onPressed:
-                  state.input.trim().isEmpty ||
+              onPressed: state.input.trim().isEmpty ||
                       state.phase.isBusy ||
                       !state.loaded
                   ? null
@@ -336,10 +344,10 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                   : const Icon(Icons.arrow_forward),
               label: Text(
                 state.phase.isBusy
-                    ? state.message
+                    ? state.localizedMessage(l10n)
                     : state.phase == TranslationPhase.success
-                    ? '重新翻译'
-                    : '开始翻译',
+                        ? l10n.translateAgain
+                        : l10n.startTranslation,
               ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(51),
@@ -351,12 +359,12 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
               const SizedBox(height: 8),
               OutlinedButton(
                 onPressed: controller.translate,
-                child: const Text('重试翻译'),
+                child: Text(l10n.retryTranslation),
               ),
               if (state.failure == TranslationFailure.modelDownload)
                 TextButton(
                   onPressed: _retryWithMobileData,
-                  child: const Text('允许移动网络下载'),
+                  child: Text(l10n.allowMobileDownload),
                 ),
             ],
             const SizedBox(height: 13),
@@ -370,11 +378,14 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          '翻译结果',
-                          style: TextStyle(fontWeight: FontWeight.w600),
+                        Text(
+                          l10n.translationResultLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        Text(state.message, style: theme.textTheme.labelSmall),
+                        Text(
+                          state.localizedMessage(l10n),
+                          style: theme.textTheme.labelSmall,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -385,8 +396,8 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                         child: SelectableText(
                           state.result?.translatedText ??
                               (state.phase == TranslationPhase.error
-                                  ? state.message
-                                  : '译文会显示在这里'),
+                                  ? state.localizedMessage(l10n)
+                                  : l10n.translationPlaceholder),
                           style: state.result == null
                               ? theme.textTheme.bodyMedium
                               : theme.textTheme.titleLarge?.copyWith(
@@ -398,8 +409,8 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                     if (state.result != null)
                       Text(
                         state.result!.engine == 'demo'
-                            ? '演示译文，不代表真实翻译效果'
-                            : '由 Google Translate 提供支持 · 译文仅供参考',
+                            ? l10n.demoDisclaimer
+                            : l10n.googleDisclaimer,
                         style: theme.textTheme.labelSmall,
                       ),
                     Divider(color: theme.colorScheme.outlineVariant),
@@ -409,28 +420,30 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                           child: Text(
                             state.result == null
                                 ? '—'
-                                : '${appLanguages[state.result!.sourceLanguage] ?? state.result!.sourceLanguage} → ${appLanguages[state.result!.targetLanguage] ?? state.result!.targetLanguage}',
+                                : '${l10n.languageName(state.result!.sourceLanguage)} → ${l10n.languageName(state.result!.targetLanguage)}',
                             style: theme.textTheme.labelSmall,
                           ),
                         ),
                         IconButton(
-                          tooltip: _speaking ? '停止朗读' : '朗读译文',
+                          tooltip: _speaking
+                              ? l10n.stopSpeakingTooltip
+                              : l10n.readTargetTooltip,
                           icon: Icon(
                             _speaking ? Icons.stop : Icons.volume_up_outlined,
                           ),
                           onPressed: _speaking
                               ? _stopSpeech
                               : state.result == null
-                              ? null
-                              : () => _speak(
-                                  state.result!.translatedText,
-                                  state.result!.targetLanguage,
-                                ),
+                                  ? null
+                                  : () => _speak(
+                                        state.result!.translatedText,
+                                        state.result!.targetLanguage,
+                                      ),
                         ),
                         IconButton(
                           tooltip: state.result?.favorite == true
-                              ? '取消收藏'
-                              : '收藏译文',
+                              ? l10n.unfavoriteTranslationTooltip
+                              : l10n.favoriteTranslationTooltip,
                           onPressed: state.result?.id.isNotEmpty == true
                               ? () => controller.toggleFavorite(state.result!)
                               : null,
@@ -441,7 +454,7 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                           ),
                         ),
                         IconButton(
-                          tooltip: '复制译文',
+                          tooltip: l10n.copyTranslationTooltip,
                           icon: const Icon(Icons.copy_outlined),
                           onPressed: state.result == null
                               ? null
@@ -449,11 +462,13 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                                   await SharingService.copyTranslation(
                                     state.result!.translatedText,
                                   );
-                                  if (context.mounted) _notice('已复制译文');
+                                  if (context.mounted) {
+                                    _notice(l10n.copiedNotice);
+                                  }
                                 },
                         ),
                         IconButton(
-                          tooltip: '分享译文',
+                          tooltip: l10n.shareTranslationTooltip,
                           icon: const Icon(Icons.share_outlined),
                           onPressed: state.result == null
                               ? null
@@ -477,24 +492,26 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
     );
   }
 
-  Widget _languageButton(String caption, String code, VoidCallback onTap) =>
-      TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(
-          alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(caption, style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: 3),
-            Text(
-              appLanguages[code] ?? code,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      );
+  Widget _languageButton(String caption, String code, VoidCallback onTap) {
+    final l10n = context.l10n;
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(caption, style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 3),
+          Text(
+            l10n.languageName(code),
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
 }

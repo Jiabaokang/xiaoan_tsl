@@ -9,6 +9,7 @@ import 'package:xiaoan_tsl/features/history/records_page.dart';
 import 'package:xiaoan_tsl/features/settings/info_page.dart';
 import 'package:xiaoan_tsl/features/settings/settings_page.dart';
 import 'package:xiaoan_tsl/features/translate/translation_home_page.dart';
+import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 
 // 四个入口各保留独立导航栈，次级页面使用根导航。
 final routerProvider = Provider<GoRouter>((ref) {
@@ -22,16 +23,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           bottomNavigationBar: NavigationBar(
             selectedIndex: shell.currentIndex,
             onDestinationSelected: (index) => shell.goBranch(index),
-            destinations: const [
-              NavigationDestination(icon: Icon(Icons.translate), label: '翻译'),
-              NavigationDestination(icon: Icon(Icons.history), label: '历史'),
+            destinations: [
               NavigationDestination(
-                icon: Icon(Icons.star_outline),
-                label: '收藏',
+                icon: const Icon(Icons.translate),
+                label: context.l10n.navTranslate,
               ),
               NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                label: '设置',
+                icon: const Icon(Icons.history),
+                label: context.l10n.navHistory,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.star_outline),
+                label: context.l10n.navFavorites,
+              ),
+              NavigationDestination(
+                icon: const Icon(Icons.settings_outlined),
+                label: context.l10n.navSettings,
               ),
             ],
           ),
@@ -93,15 +100,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('页面不存在')),
+      appBar: AppBar(title: Text(context.l10n.pageNotFoundTitle)),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('找不到这个页面'),
+            Text(context.l10n.pageNotFound),
             TextButton(
               onPressed: () => context.go('/translate'),
-              child: const Text('返回翻译首页'),
+              child: Text(context.l10n.returnToHome),
             ),
           ],
         ),
