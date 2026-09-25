@@ -12,7 +12,10 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+// android{}
+// android用configure<com.android.build.api.dsl.ApplicationExtension> 替代
 
+//configure<com.android.build.api.dsl.ApplicationExtension> {
 android {
     namespace = "com.jbk.xiaoants"
     compileSdk = 36
@@ -47,8 +50,17 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.findByName("release")
+            proguardFiles("proguard-rules.pro")
+        }
+        debug {
+            signingConfig = signingConfigs.findByName("release")
         }
     }
+}
+
+base {
+    var fileName = "TS-v${flutter.versionName}.${flutter.versionCode}"
+    archivesName.set(fileName)
 }
 
 kotlin {

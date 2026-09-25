@@ -258,7 +258,10 @@ class AppController extends Notifier<AppState> {
       result: null,
     );
     try {
-      final source = await ref.read(languageDetectionProvider).identify(text);
+      final detected = await ref.read(languageDetectionProvider).identify(text);
+      // 识别不确定时优先使用用户已明确选择的原文语言。
+      final source =
+          detected ?? (selectedSource == 'auto' ? null : selectedSource);
       if (!ref.mounted || request != _request) return;
       if (source == null || !appLanguages.containsKey(source)) {
         state = state.copyWith(

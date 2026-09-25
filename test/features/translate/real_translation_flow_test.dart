@@ -164,12 +164,26 @@ void main() {
   test('无法识别时提示补充输入，不触发模型下载', () async {
     detector.result = null;
     final controller = container.read(appControllerProvider.notifier);
+    controller.setSourceLanguage('auto');
     controller.setInput('Something long enough');
     await controller.translate();
 
     expect(container.read(appControllerProvider).phase, TranslationPhase.error);
     expect(container.read(appControllerProvider).message, contains('更完整的内容'));
     expect(models.checked, isEmpty);
+  });
+
+  test('已选原文语言时，识别不确定仍按所选方向翻译', () async {
+    detector.result = null;
+    final controller = container.read(appControllerProvider.notifier);
+    controller.setSourceLanguage('en');
+    controller.setInput('Hello');
+    await controller.translate();
+
+    final result = container.read(appControllerProvider).result;
+    expect(result?.sourceLanguage, 'en');
+    expect(result?.targetLanguage, 'zh');
+    expect(result?.translatedText, '真实译文');
   });
 
   test('模型下载失败保留输入，显式重试后成功', () async {
