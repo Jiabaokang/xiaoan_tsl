@@ -1,8 +1,9 @@
 # 小安翻译 v1.0 活跃执行计划 (Current Execution Plan)
 
 > **当前阶段**：v1.0 冲刺收官与 Google Play 准入就绪阶段  
-> **前序基线**：核心框架、本地 SQLite 数据库、ML Kit 独立服务、多语种选择及 33 项单元/组件测试已全部通过。`flutter analyze` 保持 0 问题。  
+> **当前验证**：核心框架、本地 SQLite 数据库、ML Kit 翻译和多语种选择已实现；39 项测试通过，`flutter analyze` 无问题。
 > **执行依据**：严格遵循 `docs/01_prd/prd_v1.0.md` 与 `docs/03_specs/` 各专项规格。
+> **历史步骤**：[核心框架实施计划](../superpowers/plans/2026-09-24-core-framework.md)与[v1 剩余功能实施计划](../superpowers/plans/2026-09-24-v1-completion.md)保留编写时的任务快照；本文件记录当前进度。
 
 ---
 
@@ -30,8 +31,8 @@
 
 ### 阶段四：Android Release 签名与 AAB 构建（V1-08）
 - [x] 4.1 分离 Release 签名配置
-  - **目标文件**：`android/app/build.gradle.kts`、`android/key.properties.example`
-  - **验收结果**：`key.properties` 独立加载并加入 `.gitignore`，提供签名模板示例，敏感密钥杜绝入库。
+  - **目标文件**：`android/app/build.gradle.kts`、`android/app/proguard-rules.pro`
+  - **验收结果**：`key.properties` 与签名证书保留在本地并被 Git 忽略；Release 保留 ML Kit 反射创建所需的组件注册器构造函数。
 - [x] 4.2 执行 Release AAB 构建
   - **验收结果**：成功构建生产级安装包 `build/app/outputs/bundle/release/app-release.aab`（93.9MB），无 ProGuard/R8 符号丢失错误。
 
@@ -50,13 +51,19 @@
 - [ ] 5.2 Google Play Closed Testing 测试配置（需开发者账号拥有者配合）
   - **待办**：在 Play Console 配置 Closed Testing 轨道，邀请 12 名测试人员开始 14 天测试流程。
 
+### 2026-09-25 真机问题修复
+
+- [x] OnePlus 9（Android 14）上短文本 `Hello` 曾被五字符识别门槛拦截；已选原文语言时识别不确定会使用所选语言。修复后的 debug 与 Release 均自动译出“你好”。
+- [x] Release 离线语言包曾因 R8 移除 ML Kit 组件注册器构造函数而无法查询；加入保留规则后，覆盖安装的 Release 能显示语言选择列表及离线模型状态。
+- [x] 全量 `flutter test` 39 项通过，`flutter analyze` 无问题；两次安装均使用 `adb install -r`，未卸载或清除应用数据。
+
 ---
 
 ## 质量验证红线（Hard Gates）
 
-当前工程已无条件全量通过所有门禁：
+当前工程已通过以下验证：
 1. `dart format lib test`：代码格式规范；
 2. `flutter analyze`：**0 warning, 0 error**；
-3. `flutter test`：**全量 33 项单元/组件/状态机测试通过**；
+3. `flutter test`：**全量 39 项单元/组件/状态机测试通过**；
 4. `flutter build apk --debug`：构建成功，并在真实 Android 实体机覆盖安装验证；
-5. `flutter build appbundle --release`：成功生成 `app-release.aab`。
+5. `flutter build apk --release`：构建成功，并在 OnePlus 9 覆盖安装验证短文本翻译及两种语言列表；先前构建的 AAB 尚未按本次修复重新验证。

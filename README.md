@@ -22,16 +22,26 @@ fvm_ohos install 3.27.5-ohos-1.0.0
 
 如使用自定义 FVM 缓存目录，两种安装命令应使用同一个 `FVM_CACHE_PATH`。安装 SDK 不会自动为本仓库固定版本；当前仓库没有 `.fvmrc`。
 
-## Getting Started
+### Android 打包与覆盖安装
 
-This project is a starting point for a Flutter application.
+```sh
+flutter build apk --debug
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+flutter build apk --release
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
 
-A few resources to get you started if this is your first Flutter project:
+Release 构建需本地 `android/key.properties` 与签名证书；这些文件已忽略，不提交仓库。debug 与 Release 覆盖安装需保持相同应用 ID 和签名。真机调试必须遵守 [AGENTS.md](AGENTS.md) 的覆盖安装规则。
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+### 打包命令-iOS
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter build ios --release --no-codesign
+```
+
+## 项目文档
+
+- [文档索引](docs/README.md)：当前需求、设计、实现契约、执行计划和历史记录。
+- [文档更新记录](docs/CHANGELOG.md)：逐次记录文档及协作说明的修改。
+
+实际功能与验证进度以当前代码、测试及[活跃执行计划](docs/04_plans/current_plan.md)为准。修改文档时同步更新文档记录；本地提交检查的配置方法见[文档索引](docs/README.md#修改与验证)。

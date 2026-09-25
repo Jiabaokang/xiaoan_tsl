@@ -2,7 +2,7 @@
 
 ## 项目结构与模块组织
 
-本仓库是 Flutter 应用。`lib/main.dart` 目前仍是计数器示例；新增 Dart 功能放在 `lib/` 下，并保持入口文件简洁。`test/widget_test.dart` 是现有的组件冒烟测试。`android/`、`ios/`、`macos/` 存放平台工程，仅在需要原生配置时修改。`docs/` 中的中文翻译应用文档是功能规划，不代表功能已经实现。目前 `pubspec.yaml` 未声明应用资源；新增图片等资源时，应创建相应目录并在该文件中登记。
+本仓库是小安翻译 Flutter 应用。`lib/main.dart` 初始化本地数据库与 Provider，应用页面按职责组织在 `lib/core/`、`lib/features/`、`lib/services/`；入口文件保持简洁。`test/` 包含服务、状态与组件测试。`android/`、`ios/`、`macos/` 存放平台工程，仅在需要原生配置时修改。文档入口、当前计划与历史材料见 `docs/README.md`；计划完成状态须结合当前代码和测试核对。新增应用资源时，应在 `pubspec.yaml` 中登记。
 
 ## 构建、测试与本地开发
 
@@ -33,8 +33,10 @@ Dart 代码使用默认的两个空格缩进，提交前运行 `dart format lib 
 
 ## 测试要求
 
-使用 `flutter_test` 编写组件测试，测试文件以 `*_test.dart` 命名。修改行为时补充或更新针对性测试；替换计数器示例页面时，也要更新对应的现有测试。提交 PR 前运行 `flutter test` 和 `flutter analyze`。项目目前没有设置覆盖率门槛。
+使用 `flutter_test` 编写组件测试，测试文件以 `*_test.dart` 命名。修改行为时补充或更新针对性测试；调整现有页面时同步更新对应测试。提交 PR 前运行 `flutter test` 和 `flutter analyze`。项目目前没有设置覆盖率门槛。
+
+修改 `docs/`、`AGENTS.md` 或根目录 `README.md` 时，同批更新 `docs/CHANGELOG.md`，记录日期、内容、原因和相关文件。文档目录职责及本地提交检查的启用方式见 `docs/README.md`。
 
 ## 提交与拉取请求
 
-`main` 分支尚无提交，因此没有可沿用的历史提交格式。建议使用简短的祈使式标题，例如 `feat: 添加语言选择`、`docs: 完善开发说明`。PR 应说明改动、关联已有议题（如有）、列出验证命令及结果；可见的 UI 改动应附截图。不要提交构建产物和本地 IDE 文件。
+提交使用简短的中文 Conventional Commit 标题，例如 `feat: 添加语言选择`、`docs: 完善开发说明`。PR 应说明改动、关联已有议题（如有）、列出验证命令及结果；可见的 UI 改动应附截图。不要提交构建产物和本地 IDE 文件。
