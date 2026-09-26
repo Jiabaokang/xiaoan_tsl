@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+2
+version: 1.0.0+2003
 
 environment:
   sdk: ^3.12.2
@@ -50,6 +50,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  flutter_native_splash: ^2.4.8
 
 dev_dependencies:
   flutter_test:
@@ -76,6 +77,9 @@ flutter:
 
   assets:
     - assets/branding/app_icon_128.png
+    - assets/branding/splash_icon.png
+    - assets/branding/splash_branding.png
+    - assets/branding/splash_branding_dark.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -107,3 +111,24 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_native_splash:
+  color: "#F7F8F5"
+  color_dark: "#15211F"
+  image: assets/branding/splash_icon.png
+  image_dark: assets/branding/splash_icon.png
+  branding: assets/branding/splash_branding.png
+  branding_dark: assets/branding/splash_branding_dark.png
+  branding_mode: bottom
+  branding_bottom_padding: 40
+  android: true
+  ios: true
+  web: false
+
+  android_12:
+    color: "#F7F8F5"
+    color_dark: "#15211F"
+    image: assets/branding/splash_icon.png
+    image_dark: assets/branding/splash_icon.png
+    branding: assets/branding/splash_branding.png
+    branding_dark: assets/branding/splash_branding_dark.png
