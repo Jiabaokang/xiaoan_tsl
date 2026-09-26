@@ -23,7 +23,7 @@
 
 ---
 
-### 任务 1：扩展国际化文案契约与中英双语支持
+### 任务 1 / Task 1：扩展国际化文案契约与中英双语支持
 
 **文件：**
 - 修改：`lib/l10n/app_localizations.dart`
@@ -106,7 +106,7 @@ git commit -m "feat(l10n): 增加关于页面与第三方开源库国际化文�
 
 ---
 
-### 任务 2：实现第三方开源库专属页面 `OpenSourceLicensesPage`
+### 任务 2 / Task 2：实现第三方开源库专属页面 `OpenSourceLicensesPage`
 
 **文件：**
 - 创建：`lib/features/settings/open_source_licenses_page.dart`
@@ -165,7 +165,7 @@ git commit -m "feat(settings): 实现第三方开源依赖列表与 pub-web 镜�
 
 ---
 
-### 任务 3：实现结构化卡片式隐私政策页面 `PrivacyPolicyPage`
+### 任务 3 / Task 3：实现结构化卡片式隐私政策页面 `PrivacyPolicyPage`
 
 **文件：**
 - 创建：`lib/features/settings/privacy_policy_page.dart`
@@ -218,7 +218,7 @@ git commit -m "feat(settings): 实现结构化卡片式隐私政策页面"
 
 ---
 
-### 任务 4：实现品牌化关于小安翻译页面 `AboutPage`
+### 任务 4 / Task 4：实现品牌化关于小安翻译页面 `AboutPage`
 
 **文件：**
 - 创建：`lib/features/settings/about_page.dart`
@@ -273,7 +273,7 @@ git commit -m "feat(settings): 实现品牌化关于小安翻译主页面"
 
 ---
 
-### 任务 5：路由集成、`InfoPage` 兼容层改造与全量回归验证
+### 任务 5 / Task 5：路由集成、`InfoPage` 兼容层改造与全量回归验证
 
 **文件：**
 - 修改：`lib/features/settings/info_page.dart`
