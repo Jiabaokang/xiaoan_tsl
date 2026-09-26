@@ -386,9 +386,10 @@ void main() {
     await pumpApp(tester);
     await tester.tap(find.text('设置').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('跟随系统'));
+    await tester.tap(find.widgetWithText(ListTile, '外观模式'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('深色').last);
+    expect(find.byType(SimpleDialog), findsOneWidget);
+    await tester.tap(find.widgetWithText(SimpleDialogOption, '深色'));
     await waitFor(
       tester,
       () => container.read(appControllerProvider).themeMode == ThemeMode.dark,
@@ -669,9 +670,10 @@ void main() {
       tester,
       () => container.read(appControllerProvider).defaultTargetLanguage == 'en',
     );
-    await tester.tap(find.text('跟随系统'));
+    await tester.tap(find.widgetWithText(ListTile, '外观模式'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('浅色').last);
+    expect(find.byType(SimpleDialog), findsOneWidget);
+    await tester.tap(find.widgetWithText(SimpleDialogOption, '浅色'));
     await waitFor(
       tester,
       () => container.read(appControllerProvider).themeMode == ThemeMode.light,
@@ -809,4 +811,47 @@ void main() {
     expect(find.text('Translate'), findsWidgets);
     expect(find.text('Settings'), findsOneWidget);
   });
+
+  testWidgets('设置中外观模式显示副标题且支持通过弹窗切换与勾选', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('设置').last);
+    await tester.pumpAndSettle();
+
+    // 初始状态下外观模式显示副标题“跟随系统”
+    final themeTile = find.widgetWithText(ListTile, '外观模式');
+    expect(themeTile, findsOneWidget);
+    expect(
+      find.descendant(of: themeTile, matching: find.text('跟随系统')),
+      findsOneWidget,
+    );
+
+    // 点击外观模式整行，弹出与应用语言一致的 SimpleDialog
+    await tester.tap(themeTile);
+    await tester.pumpAndSettle();
+    expect(find.byType(SimpleDialog), findsOneWidget);
+
+    // 验证当前“跟随系统”选项带有勾选图标
+    final systemOption = find.widgetWithText(SimpleDialogOption, '跟随系统');
+    expect(
+      find.descendant(of: systemOption, matching: find.byIcon(Icons.check)),
+      findsOneWidget,
+    );
+
+    // 点击“深色”选项
+    await tester.tap(find.widgetWithText(SimpleDialogOption, '深色'));
+    await tester.pumpAndSettle();
+
+    // 弹窗关闭，主题切换为深色，副标题更新为“深色”
+    expect(find.byType(SimpleDialog), findsNothing);
+    await waitFor(
+      tester,
+      () => container.read(appControllerProvider).themeMode == ThemeMode.dark,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: themeTile, matching: find.text('深色')),
+      findsOneWidget,
+    );
+  });
 }
+

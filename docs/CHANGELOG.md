@@ -2,6 +2,11 @@
 
 每次提交涉及 `docs/`、`AGENTS.md` 或根目录 `README.md` 的修改时，在顶部新增一条记录。一个提交或一批相关修改写一条；日期使用本地日期，说明修改内容、原因和相关文件。Git 历史保留逐行差异，本文件方便按时间查找文档变更。
 
+## 2026-09-26 — 外观模式的显示和选择调整为和应用语言一致
+
+- 交互对齐与视觉一致性：修改 [SettingsPage](../lib/features/settings/settings_page.dart)，将外观模式从行内下拉菜单（DropdownButton）重构为与应用语言完全一致的标准 ListTile（显示当前模式副标题与右侧箭头），点击整行呼出包含跟随系统、浅色、深色并带选中对勾标记（`Icons.check`）的 SimpleDialog 单选弹窗，调用 `AppController.setThemeMode` 进行即时响应与本地持久化。
+- 自动化测试与质量保障：在 [test/widget_test.dart](../test/widget_test.dart) 中适配已有测试中的主题切换交互，并新增设置中外观模式副标题与弹窗切换勾选的组件测试用例；全量 66 项测试全部通过，`flutter analyze` 零告警零错误。
+
 ## 2026-09-26 — 完成隐私政策、关于页面与第三方开源库路由集成及兼容层改造
 
 - 路由注册与解耦：更新 [app_router.dart](../lib/core/router/app_router.dart)，将 `/privacy` 映射到 [PrivacyPolicyPage](../lib/features/settings/privacy_policy_page.dart)，`/about` 映射到 [AboutPage](../lib/features/settings/about_page.dart)，新增 `/about/dependencies` 映射到 [OpenSourceLicensesPage](../lib/features/settings/open_source_licenses_page.dart)。

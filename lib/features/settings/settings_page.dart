@@ -34,27 +34,60 @@ class SettingsPage extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.dark_mode_outlined),
             title: Text(l10n.themeModeLabel),
-            trailing: DropdownButton<ThemeMode>(
-              value: state.themeMode,
-              underline: const SizedBox.shrink(),
-              items: [
-                DropdownMenuItem(
-                  value: ThemeMode.system,
-                  child: Text(l10n.themeModeSystem),
-                ),
-                DropdownMenuItem(
-                  value: ThemeMode.light,
-                  child: Text(l10n.themeModeLight),
-                ),
-                DropdownMenuItem(
-                  value: ThemeMode.dark,
-                  child: Text(l10n.themeModeDark),
-                ),
-              ],
-              onChanged: (mode) {
-                if (mode != null) controller.setThemeMode(mode);
+            subtitle: Text(
+              switch (state.themeMode) {
+                ThemeMode.system => l10n.themeModeSystem,
+                ThemeMode.light => l10n.themeModeLight,
+                ThemeMode.dark => l10n.themeModeDark,
               },
             ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              final selected = await showDialog<ThemeMode>(
+                context: context,
+                builder: (dialogContext) => SimpleDialog(
+                  title: Text(l10n.themeModeLabel),
+                  children: [
+                    SimpleDialogOption(
+                      onPressed: () =>
+                          Navigator.pop(dialogContext, ThemeMode.system),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(l10n.themeModeSystem)),
+                          if (state.themeMode == ThemeMode.system)
+                            const Icon(Icons.check, size: 20),
+                        ],
+                      ),
+                    ),
+                    SimpleDialogOption(
+                      onPressed: () =>
+                          Navigator.pop(dialogContext, ThemeMode.light),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(l10n.themeModeLight)),
+                          if (state.themeMode == ThemeMode.light)
+                            const Icon(Icons.check, size: 20),
+                        ],
+                      ),
+                    ),
+                    SimpleDialogOption(
+                      onPressed: () =>
+                          Navigator.pop(dialogContext, ThemeMode.dark),
+                      child: Row(
+                        children: [
+                          Expanded(child: Text(l10n.themeModeDark)),
+                          if (state.themeMode == ThemeMode.dark)
+                            const Icon(Icons.check, size: 20),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+              if (selected != null) {
+                await controller.setThemeMode(selected);
+              }
+            },
           ),
           ListTile(
             leading: const Icon(Icons.language_outlined),
