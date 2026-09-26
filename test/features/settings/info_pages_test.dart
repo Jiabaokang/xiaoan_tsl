@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:xiaoan_tsl/features/settings/about_page.dart';
 import 'package:xiaoan_tsl/features/settings/open_source_licenses_page.dart';
 import 'package:xiaoan_tsl/features/settings/privacy_policy_page.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
@@ -14,6 +16,16 @@ const _testLocalizationsDelegates = [
 ];
 
 void main() {
+  setUpAll(() {
+    PackageInfo.setMockInitialValues(
+      appName: '小安翻译',
+      packageName: 'com.jbk.xiaoants',
+      version: '1.0.0',
+      buildNumber: '1',
+      buildSignature: '',
+    );
+  });
+
   test('AppLocalizations 包含新增的关于和第三方库文案', () {
     const zh = AppLocalizationsZh();
     const en = AppLocalizationsEn();
@@ -313,5 +325,147 @@ void main() {
 
     expect(find.text('隐私政策'), findsOneWidget);
     expect(find.text('生效日期：2026年9月'), findsOneWidget);
+  });
+
+  testWidgets('AboutPage 展示应用图标、版本号及三大核心特性卡片', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AboutPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Image), findsOneWidget);
+    expect(find.text('小安翻译'), findsOneWidget);
+    expect(find.text('Xiaoan Translate'), findsOneWidget);
+    expect(find.text('测试版'), findsOneWidget);
+    expect(find.text('版本 1.0.0 (1)'), findsOneWidget);
+    expect(find.textContaining('Google ML Kit'), findsWidgets);
+    expect(find.text('第三方开源库与组件'), findsOneWidget);
+    expect(find.text('轻量、私密、纯粹的设备端离线翻译工具'), findsOneWidget);
+    expect(find.text('离线双向翻译'), findsOneWidget);
+    expect(find.text('隐私无痕存储'), findsOneWidget);
+    expect(find.text('本地语音朗读'), findsOneWidget);
+    expect(find.text('隐私政策'), findsOneWidget);
+    expect(
+      find.text('Copyright © 2026 小安翻译 Team. All rights reserved.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('AboutPage 在英文环境下渲染英文品牌与特性描述', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AboutPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('About Xiaoan Translate'), findsOneWidget);
+    expect(find.text('Xiaoan Translate'), findsOneWidget);
+    expect(find.text('小安翻译'), findsOneWidget);
+    expect(find.text('Beta'), findsOneWidget);
+    expect(find.text('Version 1.0.0 (1)'), findsOneWidget);
+    expect(find.text('Offline Bi-Directional Translation'), findsOneWidget);
+    expect(find.text('Private Local Storage'), findsOneWidget);
+    expect(find.text('Native Speech Synthesis'), findsOneWidget);
+    expect(find.text('Open Source Licenses & Dependencies'), findsOneWidget);
+    expect(find.text('Privacy Policy'), findsOneWidget);
+    expect(
+      find.text('Copyright © 2026 Xiaoan Translate Team. All rights reserved.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('AboutPage 支持构造注入 PackageInfo Future 展示指定版本', (tester) async {
+    final mockInfo = PackageInfo(
+      appName: '小安翻译',
+      packageName: 'com.jbk.xiaoants',
+      version: '2.0.0',
+      buildNumber: '2026',
+      buildSignature: '',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AboutPage(
+          packageInfoFuture: Future.value(mockInfo),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('版本 2.0.0 (2026)'), findsOneWidget);
+  });
+
+  testWidgets('AboutPage 点击第三方开源库与组件触发 onNavigateToDependencies', (
+    tester,
+  ) async {
+    var navigated = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AboutPage(
+          onNavigateToDependencies: () => navigated = true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final target = find.text('第三方开源库与组件');
+    await tester.ensureVisible(target);
+    await tester.tap(target);
+    await tester.pumpAndSettle();
+
+    expect(navigated, isTrue);
+  });
+
+  testWidgets('AboutPage 点击隐私政策触发 onNavigateToPrivacy', (tester) async {
+    var navigated = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AboutPage(
+          onNavigateToPrivacy: () => navigated = true,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final target = find.text('隐私政策');
+    await tester.ensureVisible(target);
+    await tester.tap(target);
+    await tester.pumpAndSettle();
+
+    expect(navigated, isTrue);
+  });
+
+  testWidgets('AboutPage 在暗色模式下正常渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
+        locale: const Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const AboutPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('小安翻译'), findsOneWidget);
+    expect(find.text('关于小安翻译'), findsOneWidget);
+    expect(find.byType(Image), findsOneWidget);
   });
 }
