@@ -149,6 +149,35 @@ abstract class AppLocalizations {
   String versionLabel(String version, String buildNumber);
   String get loadingVersion;
 
+  // 结构化隐私政策卡片与外部链接文案
+  String get privacyEffectiveDate;
+  String get privacySubtitle;
+  String get privacySection1Title;
+  String get privacySection1Content;
+  String get privacySection2Title;
+  String get privacySection2Content;
+  String get privacySection3Title;
+  String get privacySection3Content;
+  String get privacySection4Title;
+  String get privacySection4Content;
+  String get privacySection5Title;
+  String get privacySection5Content;
+  String get viewFullPrivacyPolicy;
+
+  // 关于页面定位、特性卡片、开源依赖与版权文案
+  String get aboutTagline;
+  String get aboutFeatureOfflineTitle;
+  String get aboutFeatureOfflineDesc;
+  String get aboutFeaturePrivacyTitle;
+  String get aboutFeaturePrivacyDesc;
+  String get aboutFeatureTtsTitle;
+  String get aboutFeatureTtsDesc;
+  String get openSourceDependenciesLabel;
+  String get openSourceDependenciesSubtitle;
+  String get openSourceDependenciesTitle;
+  String get openSourcePageNotice;
+  String get copyrightNotice;
+
   // 离线语言包页面
   String get offlineModelsPageNotice;
   String get statusDownloaded;
@@ -400,6 +429,68 @@ class AppLocalizationsZh extends AppLocalizations {
       '版本 $version ($buildNumber)';
   @override
   String get loadingVersion => '正在读取版本信息…';
+
+  @override
+  String get privacyEffectiveDate => '生效日期：2026年9月';
+  @override
+  String get privacySubtitle =>
+      '小安翻译无需注册登录，所有数据与翻译均在设备本地完成，我们不会向自有服务器上传您的翻译内容。';
+  @override
+  String get privacySection1Title => '数据存储与设备边界';
+  @override
+  String get privacySection1Content =>
+      '输入文字、翻译历史、收藏和偏好设置均保存在设备本地数据库中。Android 版本已明确关闭系统备份，确保您的记录不会同步到外部云端。';
+  @override
+  String get privacySection2Title => '离线模型与网络隔离';
+  @override
+  String get privacySection2Content =>
+      '语言识别与机器翻译均通过 Google ML Kit 离线模型在设备本地芯片推理完成。翻译文本绝不上传自有或第三方服务器；模型下载消耗流量均有明确确认与提示。';
+  @override
+  String get privacySection3Title => '语音与系统分享安全';
+  @override
+  String get privacySection3Content =>
+      '语音朗读仅调用设备底层已安装的系统 TTS 语音引擎，不向外部上传音频；复制与分享仅调用系统原生剪贴板与系统分享面板。';
+  @override
+  String get privacySection4Title => '权限最小化声明';
+  @override
+  String get privacySection4Content =>
+      '应用严格遵循最小必要权限原则，不申请麦克风、相机、位置或通讯录等任何敏感系统权限。';
+  @override
+  String get privacySection5Title => '诊断数据与第三方说明';
+  @override
+  String get privacySection5Content =>
+      'Google ML Kit 可能向 Google 发送设备型号、操作系统版本及性能指标等基础诊断数据。完整的数据处理规则请参阅公开隐私政策。';
+  @override
+  String get viewFullPrivacyPolicy => '查看完整在线隐私政策';
+
+  @override
+  String get aboutTagline => '轻量、私密、纯粹的设备端离线翻译工具';
+  @override
+  String get aboutFeatureOfflineTitle => '离线双向翻译';
+  @override
+  String get aboutFeatureOfflineDesc =>
+      '基于 Google ML Kit 离线多语种模型，无需连接服务器即可在本地完成快速互译。';
+  @override
+  String get aboutFeaturePrivacyTitle => '隐私无痕存储';
+  @override
+  String get aboutFeaturePrivacyDesc =>
+      '记录与偏好严格保存在本地 SQLite 数据库中，关闭系统云备份，数据完全归属于你。';
+  @override
+  String get aboutFeatureTtsTitle => '本地语音朗读';
+  @override
+  String get aboutFeatureTtsDesc => '直连系统底层原生 TTS 语音合成引擎，发音流畅自然且不消耗额外网络流量。';
+  @override
+  String get openSourceDependenciesLabel => '第三方开源库与组件';
+  @override
+  String get openSourceDependenciesSubtitle => '查看本应用使用的 13 个核心开源依赖';
+  @override
+  String get openSourceDependenciesTitle => '第三方开源库与组件';
+  @override
+  String get openSourcePageNotice =>
+      '本应用严格遵循各开源库的许可协议。点击任意库可在浏览器打开其国内镜像页面（pub-web.flutter-io.cn）了解详情。';
+  @override
+  String get copyrightNotice =>
+      'Copyright © 2026 小安翻译 Team. All rights reserved.';
 
   @override
   String get offlineModelsPageNotice => '模型状态来自设备。首次下载默认仅使用 Wi-Fi，下载后可离线翻译。';
@@ -681,6 +772,73 @@ class AppLocalizationsEn extends AppLocalizations {
       'Version $version ($buildNumber)';
   @override
   String get loadingVersion => 'Loading version information…';
+
+  @override
+  String get privacyEffectiveDate => 'Effective Date: September 2026';
+  @override
+  String get privacySubtitle =>
+      'Xiaoan Translate requires no registration or login. All data and translation are completed locally on your device; we do not upload your text to any proprietary server.';
+  @override
+  String get privacySection1Title => 'Data Storage & Device Boundary';
+  @override
+  String get privacySection1Content =>
+      'Input text, translation history, favorites, and preferences are stored exclusively in the local database. System backup is explicitly disabled on Android to prevent cloud sync.';
+  @override
+  String get privacySection2Title => 'Offline Models & Network Isolation';
+  @override
+  String get privacySection2Content =>
+      'Language identification and translation run on-device via Google ML Kit offline models. Translated text is never uploaded to any server. Model downloads require explicit network confirmation.';
+  @override
+  String get privacySection3Title => 'Speech & System Sharing Security';
+  @override
+  String get privacySection3Content =>
+      'Speech synthesis uses your device\'s built-in TTS engine without transmitting audio externally. Copying and sharing strictly rely on native system clipboard and share sheets.';
+  @override
+  String get privacySection4Title => 'Minimal Permissions Declaration';
+  @override
+  String get privacySection4Content =>
+      'The app strictly adheres to minimal permissions and does not request microphone, camera, location, or contacts permissions.';
+  @override
+  String get privacySection5Title => 'Diagnostic Data & Third-Party Notice';
+  @override
+  String get privacySection5Content =>
+      'Google ML Kit may transmit basic diagnostic metrics (such as device model and OS version) to Google. For complete details, please refer to the public privacy policy.';
+  @override
+  String get viewFullPrivacyPolicy => 'View Complete Online Privacy Policy';
+
+  @override
+  String get aboutTagline =>
+      'Lightweight, private, and on-device offline translation tool';
+  @override
+  String get aboutFeatureOfflineTitle => 'Offline Bi-Directional Translation';
+  @override
+  String get aboutFeatureOfflineDesc =>
+      'Powered by Google ML Kit on-device models, translating quickly without external server connections.';
+  @override
+  String get aboutFeaturePrivacyTitle => 'Private Local Storage';
+  @override
+  String get aboutFeaturePrivacyDesc =>
+      'Records and preferences stay securely in a local SQLite database with cloud backup disabled.';
+  @override
+  String get aboutFeatureTtsTitle => 'Native Speech Synthesis';
+  @override
+  String get aboutFeatureTtsDesc =>
+      'Direct integration with device native TTS engine for natural pronunciation without extra data usage.';
+  @override
+  String get openSourceDependenciesLabel =>
+      'Open Source Licenses & Dependencies';
+  @override
+  String get openSourceDependenciesSubtitle =>
+      'View the 13 core open source dependencies used by this app';
+  @override
+  String get openSourceDependenciesTitle =>
+      'Open Source Licenses & Dependencies';
+  @override
+  String get openSourcePageNotice =>
+      'This application complies with each open source package license. Tap any library to open its mirror details page in your browser.';
+  @override
+  String get copyrightNotice =>
+      'Copyright © 2026 Xiaoan Translate Team. All rights reserved.';
 
   @override
   String get offlineModelsPageNotice =>
