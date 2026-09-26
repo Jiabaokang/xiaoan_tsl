@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:xiaoan_tsl/features/settings/open_source_licenses_page.dart';
+import 'package:xiaoan_tsl/features/settings/privacy_policy_page.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 
 const _testLocalizationsDelegates = [
@@ -169,5 +170,148 @@ void main() {
 
     expect(find.text('第三方开源库与组件'), findsOneWidget);
     expect(find.byType(ListTile), findsNWidgets(13));
+  });
+
+  testWidgets('PrivacyPolicyPage 渲染 5 个结构化卡片和外链按钮', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PrivacyPolicyPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('生效日期：2026年9月'), findsOneWidget);
+    expect(find.textContaining('关闭系统备份'), findsOneWidget);
+    expect(find.textContaining('不申请麦克风'), findsOneWidget);
+    expect(find.text('https://jbksy.cn/xiaoan-privacy.html'), findsOneWidget);
+    expect(find.text('查看完整在线隐私政策'), findsOneWidget);
+    expect(find.text('数据存储与设备边界'), findsOneWidget);
+    expect(find.text('离线模型与网络隔离'), findsOneWidget);
+    expect(find.text('语音与系统分享安全'), findsOneWidget);
+    expect(find.text('权限最小化声明'), findsOneWidget);
+    expect(find.text('诊断数据与第三方说明'), findsOneWidget);
+  });
+
+  testWidgets('PrivacyPolicyPage 在英文环境下渲染英文各卡片内容', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('en'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PrivacyPolicyPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Effective Date: September 2026'), findsOneWidget);
+    expect(find.text('Data Storage & Device Boundary'), findsOneWidget);
+    expect(find.text('Offline Models & Network Isolation'), findsOneWidget);
+    expect(find.text('Speech & System Sharing Security'), findsOneWidget);
+    expect(find.text('Minimal Permissions Declaration'), findsOneWidget);
+    expect(find.text('Diagnostic Data & Third-Party Notice'), findsOneWidget);
+    expect(find.text('View Complete Online Privacy Policy'), findsOneWidget);
+  });
+
+  testWidgets('PrivacyPolicyPage 点击外链触发外部浏览器打开在线隐私政策', (tester) async {
+    Uri? launchedUri;
+    LaunchMode? launchMode;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PrivacyPolicyPage(
+          urlLauncher: (uri, {mode = LaunchMode.platformDefault}) async {
+            launchedUri = uri;
+            launchMode = mode;
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final button = find.text('查看完整在线隐私政策');
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    expect(
+      launchedUri.toString(),
+      'https://jbksy.cn/xiaoan-privacy.html',
+    );
+    expect(launchMode, LaunchMode.externalApplication);
+  });
+
+  testWidgets('PrivacyPolicyPage 点击 URL 文本也能触发外链打开', (tester) async {
+    Uri? launchedUri;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PrivacyPolicyPage(
+          urlLauncher: (uri, {mode = LaunchMode.platformDefault}) async {
+            launchedUri = uri;
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final urlText = find.text('https://jbksy.cn/xiaoan-privacy.html');
+    await tester.ensureVisible(urlText);
+    await tester.tap(urlText);
+    await tester.pumpAndSettle();
+
+    expect(
+      launchedUri.toString(),
+      'https://jbksy.cn/xiaoan-privacy.html',
+    );
+  });
+
+  testWidgets('PrivacyPolicyPage 打开外链失败时显示错误提示 SnackBar', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PrivacyPolicyPage(
+          urlLauncher: (uri, {mode = LaunchMode.platformDefault}) async =>
+              false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final button = find.text('查看完整在线隐私政策');
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('无法打开网页，请在浏览器输入页面上的网址'), findsOneWidget);
+  });
+
+  testWidgets('PrivacyPolicyPage 在暗色模式下正常渲染', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: ThemeData.dark(useMaterial3: true),
+        locale: const Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const PrivacyPolicyPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('隐私政策'), findsOneWidget);
+    expect(find.text('生效日期：2026年9月'), findsOneWidget);
   });
 }
