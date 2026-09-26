@@ -2,6 +2,11 @@
 
 每次提交涉及 `docs/`、`AGENTS.md` 或根目录 `README.md` 的修改时，在顶部新增一条记录。一个提交或一批相关修改写一条；日期使用本地日期，说明修改内容、原因和相关文件。Git 历史保留逐行差异，本文件方便按时间查找文档变更。
 
+## 2026-09-26 — 编写外观模式设置交互与应用语言对齐设计规范
+
+- 设计规范定义：编写 [外观模式设置交互与应用语言对齐设计规范](superpowers/specs/2026-09-26-theme-mode-settings-consistency-design.md)，将设置页中外观模式的显示与选择从行内 DropdownButton 改造为与应用语言一致的 ListTile（含副标题、右箭头）及 SimpleDialog 单选勾选弹窗，并制定自动化测试与验收标准。
+- 验证：完成规格自检，覆盖组件结构、状态流、文案契约与测试用例适配计划。
+
 ## 2026-09-26 — 支持中文与英文国际化多语言及跟随系统语言
 
 - 架构设计与状态持久化：引入 `flutter_localizations` 与 `intl`，定义 [AppLocalizations](file:///Users/jiabaokang/AndroidDeveloper/FlutterProject/xiaoan_tsl/lib/l10n/app_localizations.dart) 契约及中英文实现；在 `AppState` / `AppController` 中增加 `localeMode` 支持跟随系统（`system`）、简体中文（`zh`）和英文（`en`），并通过本地轻量存储持久化偏好。
