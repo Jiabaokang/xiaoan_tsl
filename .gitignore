@@ -55,3 +55,6 @@ app.*.map.json
 **/key.properties
 *.jks
 *.keystore
+
+# googlePlay resource
+store/
