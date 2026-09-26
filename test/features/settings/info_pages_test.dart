@@ -230,6 +230,33 @@ void main() {
     expect(find.text('Minimal Permissions Declaration'), findsOneWidget);
     expect(find.text('Diagnostic Data & Third-Party Notice'), findsOneWidget);
     expect(find.text('View Complete Online Privacy Policy'), findsOneWidget);
+    expect(
+        find.text('https://jbksy.cn/xiaoan-privacy-en.html'), findsOneWidget);
+  });
+
+  testWidgets('PrivacyPolicyPage 英文界面打开英文政策网页', (tester) async {
+    Uri? launchedUri;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: PrivacyPolicyPage(
+          urlLauncher: (uri, {mode = LaunchMode.platformDefault}) async {
+            launchedUri = uri;
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final button = find.text('View Complete Online Privacy Policy');
+    await tester.ensureVisible(button);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+
+    expect(launchedUri.toString(), 'https://jbksy.cn/xiaoan-privacy-en.html');
   });
 
   testWidgets('PrivacyPolicyPage 点击外链触发外部浏览器打开在线隐私政策', (tester) async {

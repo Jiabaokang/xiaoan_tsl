@@ -6,6 +6,13 @@ import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 
 /// 公开政策与应用商店列表统一使用的在线隐私政策地址。
 const privacyPolicyUrl = 'https://jbksy.cn/xiaoan-privacy.html';
+const privacyPolicyUrlEn = 'https://jbksy.cn/xiaoan-privacy-en.html';
+
+/// 按应用界面语言选择对应的公开政策页面。
+String privacyPolicyUrlFor(BuildContext context) =>
+    Localizations.localeOf(context).languageCode == 'en'
+        ? privacyPolicyUrlEn
+        : privacyPolicyUrl;
 
 /// 打开在线完整隐私政策网页。
 ///
@@ -15,7 +22,7 @@ Future<void> openPrivacyPolicyUrl(
   BuildContext context, {
   Future<bool> Function(Uri url, {LaunchMode mode})? urlLauncher,
 }) async {
-  final uri = Uri.parse(privacyPolicyUrl);
+  final uri = Uri.parse(privacyPolicyUrlFor(context));
   final launcher = urlLauncher ?? launchUrl;
   try {
     if (await launcher(uri, mode: LaunchMode.externalApplication)) {
@@ -286,7 +293,7 @@ class _PrivacyExternalLinkCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        privacyPolicyUrl,
+                        privacyPolicyUrlFor(context),
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: scheme.primary,
                           decoration: TextDecoration.underline,

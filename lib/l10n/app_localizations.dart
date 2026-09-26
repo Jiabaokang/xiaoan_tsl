@@ -434,22 +434,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get privacyEffectiveDate => '生效日期：2026年9月';
   @override
   String get privacySubtitle =>
-      '小安翻译无需注册登录，所有数据与翻译均在设备本地完成，我们不会向自有服务器上传您的翻译内容。';
+      '小安翻译无需注册登录。翻译文字在设备端处理，历史与偏好保存在本机；ML Kit 仍可能联网下载模型并发送诊断数据。';
   @override
   String get privacySection1Title => '数据存储与设备边界';
   @override
   String get privacySection1Content =>
-      '输入文字、翻译历史、收藏和偏好设置均保存在设备本地数据库中。Android 版本已明确关闭系统备份，确保您的记录不会同步到外部云端。';
+      '成功翻译后的原文、译文、语言、时间和收藏保存在本机；主题、默认目标语言及界面语言偏好也保存在本机。Android 版本已关闭系统备份。';
   @override
   String get privacySection2Title => '离线模型与网络隔离';
   @override
   String get privacySection2Content =>
-      '语言识别与机器翻译均通过 Google ML Kit 离线模型在设备本地芯片推理完成。翻译文本绝不上传自有或第三方服务器；模型下载消耗流量均有明确确认与提示。';
+      'Google ML Kit 在设备端识别和翻译文字。首次使用尚未安装的语言模型时需要联网下载，默认仅用 Wi-Fi；下载失败后可明确选择移动数据。';
   @override
   String get privacySection3Title => '语音与系统分享安全';
   @override
   String get privacySection3Content =>
-      '语音朗读仅调用设备底层已安装的系统 TTS 语音引擎，不向外部上传音频；复制与分享仅调用系统原生剪贴板与系统分享面板。';
+      '朗读会把所选文字交给设备安装的语音引擎；该引擎是否联网取决于提供者。复制和分享会把文字交给系统剪贴板或您选择的应用。';
   @override
   String get privacySection4Title => '权限最小化声明';
   @override
@@ -459,7 +459,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get privacySection5Title => '诊断数据与第三方说明';
   @override
   String get privacySection5Content =>
-      'Google ML Kit 可能向 Google 发送设备型号、操作系统版本及性能指标等基础诊断数据。完整的数据处理规则请参阅公开隐私政策。';
+      'Google ML Kit 可能向 Google 发送设备、应用、语言及性能等诊断数据。完整的数据处理规则请参阅公开隐私政策。';
   @override
   String get viewFullPrivacyPolicy => '查看完整在线隐私政策';
 
@@ -777,22 +777,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacyEffectiveDate => 'Effective Date: September 2026';
   @override
   String get privacySubtitle =>
-      'Xiaoan Translate requires no registration or login. All data and translation are completed locally on your device; we do not upload your text to any proprietary server.';
+      'Xiaoan Translate requires no account. Text is translated on your device, and history and preferences stay there; ML Kit may still download models and send diagnostics.';
   @override
   String get privacySection1Title => 'Data Storage & Device Boundary';
   @override
   String get privacySection1Content =>
-      'Input text, translation history, favorites, and preferences are stored exclusively in the local database. System backup is explicitly disabled on Android to prevent cloud sync.';
+      'After translation, source text, translated text, languages, time and favorites are stored locally. Theme, default target language and interface language preferences are also stored locally. Android system backup is disabled.';
   @override
   String get privacySection2Title => 'Offline Models & Network Isolation';
   @override
   String get privacySection2Content =>
-      'Language identification and translation run on-device via Google ML Kit offline models. Translated text is never uploaded to any server. Model downloads require explicit network confirmation.';
+      'Google ML Kit identifies languages and translates text on-device. A missing language model needs a network download, using Wi-Fi by default. After a failed download, you may explicitly allow mobile data.';
   @override
   String get privacySection3Title => 'Speech & System Sharing Security';
   @override
   String get privacySection3Content =>
-      'Speech synthesis uses your device\'s built-in TTS engine without transmitting audio externally. Copying and sharing strictly rely on native system clipboard and share sheets.';
+      'Reading text aloud passes the selected text to your installed speech engine; whether it uses the network depends on its provider. Copy and Share pass text to the system clipboard or an app you choose.';
   @override
   String get privacySection4Title => 'Minimal Permissions Declaration';
   @override
@@ -802,7 +802,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacySection5Title => 'Diagnostic Data & Third-Party Notice';
   @override
   String get privacySection5Content =>
-      'Google ML Kit may transmit basic diagnostic metrics (such as device model and OS version) to Google. For complete details, please refer to the public privacy policy.';
+      'Google ML Kit may send device, app, language and performance diagnostics to Google. See the public privacy policy for the full details.';
   @override
   String get viewFullPrivacyPolicy => 'View Complete Online Privacy Policy';
 
