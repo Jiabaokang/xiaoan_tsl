@@ -6,7 +6,9 @@ import 'package:xiaoan_tsl/features/favorites/favorites_page.dart';
 import 'package:xiaoan_tsl/features/language/language_page.dart';
 import 'package:xiaoan_tsl/features/language/offline_models_page.dart';
 import 'package:xiaoan_tsl/features/history/records_page.dart';
-import 'package:xiaoan_tsl/features/settings/info_page.dart';
+import 'package:xiaoan_tsl/features/settings/about_page.dart';
+import 'package:xiaoan_tsl/features/settings/open_source_licenses_page.dart';
+import 'package:xiaoan_tsl/features/settings/privacy_policy_page.dart';
 import 'package:xiaoan_tsl/features/settings/settings_page.dart';
 import 'package:xiaoan_tsl/features/translate/translation_home_page.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
@@ -92,11 +94,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/privacy',
-        builder: (context, state) => const InfoPage(kind: InfoKind.privacy),
+        builder: (context, state) => const PrivacyPolicyPage(),
       ),
       GoRoute(
         path: '/about',
-        builder: (context, state) => const InfoPage(kind: InfoKind.about),
+        builder: (context, state) => const AboutPage(),
+      ),
+      GoRoute(
+        path: '/about/dependencies',
+        builder: (context, state) => const OpenSourceLicensesPage(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

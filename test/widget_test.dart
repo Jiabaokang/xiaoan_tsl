@@ -413,6 +413,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('版本 1.0.0 (1)'), findsOneWidget);
     expect(find.textContaining('Google ML Kit'), findsOneWidget);
+    await tester.ensureVisible(find.text('第三方开源库与组件'));
+    await tester.tap(find.text('第三方开源库与组件'));
+    await tester.pumpAndSettle();
+    expect(find.text('flutter_riverpod'), findsOneWidget);
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.text('关于小安翻译'), findsOneWidget);
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     await tester.drag(find.byType(ListView).last, const Offset(0, -100));

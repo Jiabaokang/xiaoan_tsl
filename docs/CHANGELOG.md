@@ -2,6 +2,12 @@
 
 每次提交涉及 `docs/`、`AGENTS.md` 或根目录 `README.md` 的修改时，在顶部新增一条记录。一个提交或一批相关修改写一条；日期使用本地日期，说明修改内容、原因和相关文件。Git 历史保留逐行差异，本文件方便按时间查找文档变更。
 
+## 2026-09-26 — 完成隐私政策、关于页面与第三方开源库路由集成及兼容层改造
+
+- 路由注册与解耦：更新 [app_router.dart](../lib/core/router/app_router.dart)，将 `/privacy` 映射到 [PrivacyPolicyPage](../lib/features/settings/privacy_policy_page.dart)，`/about` 映射到 [AboutPage](../lib/features/settings/about_page.dart)，新增 `/about/dependencies` 映射到 [OpenSourceLicensesPage](../lib/features/settings/open_source_licenses_page.dart)。
+- 兼容层平滑过渡：改造 [info_page.dart](../lib/features/settings/info_page.dart) 为透明转发与类型导出兼容层，保留 `InfoKind` 与 `InfoPage` 类，保障已有调用方与深链无破坏。
+- 自动化测试与质量保障：全量 65 项自动化测试全部通过，包括新增的针对隐私政策结构化卡片、品牌关于页特性、第三方库镜像跳转、兼容转发层及路由配置的测试，`dart format lib test` 格式化规范，`flutter analyze` 零警告零错误。
+
 ## 2026-09-26 — 编写隐私政策与关于小安翻译重构及第三方库跳转设计规范与实现计划
 
 - 设计规范与实现计划：编写 [隐私政策与关于小安翻译重构及第三方库跳转设计规范](superpowers/specs/2026-09-26-privacy-and-about-page-design.md) 与 [实现计划](superpowers/plans/2026-09-26-privacy-and-about-page.md)，将隐私政策升级为结构化卡片与清晰章节排版，重构关于小安翻译突出品牌与核心离线特性，并新增独立的第三方开源依赖展示页，支持点击跳转至 `https://pub-web.flutter-io.cn/packages/<name>`。

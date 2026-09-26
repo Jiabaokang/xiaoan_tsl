@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:xiaoan_tsl/core/router/app_router.dart';
 import 'package:xiaoan_tsl/features/settings/about_page.dart';
+import 'package:xiaoan_tsl/features/settings/info_page.dart'
+    show InfoKind, InfoPage;
 import 'package:xiaoan_tsl/features/settings/open_source_licenses_page.dart';
 import 'package:xiaoan_tsl/features/settings/privacy_policy_page.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
@@ -467,5 +472,53 @@ void main() {
     expect(find.text('小安翻译'), findsOneWidget);
     expect(find.text('关于小安翻译'), findsOneWidget);
     expect(find.byType(Image), findsOneWidget);
+  });
+
+  testWidgets('InfoPage 兼容层以 InfoKind.privacy 构造转发至 PrivacyPolicyPage', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: InfoPage(kind: InfoKind.privacy),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PrivacyPolicyPage), findsOneWidget);
+    expect(find.text('隐私政策'), findsOneWidget);
+    expect(find.text('生效日期：2026年9月'), findsOneWidget);
+  });
+
+  testWidgets('InfoPage 兼容层以 InfoKind.about 构造转发至 AboutPage', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: InfoPage(kind: InfoKind.about),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AboutPage), findsOneWidget);
+    expect(find.text('关于小安翻译'), findsOneWidget);
+    expect(find.text('轻量、私密、纯粹的设备端离线翻译工具'), findsOneWidget);
+  });
+
+  test('routerProvider 正确配置 /privacy、/about 与 /about/dependencies 路由', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final router = container.read(routerProvider);
+    final routes = router.configuration.routes.whereType<GoRoute>().toList();
+
+    expect(routes.any((r) => r.path == '/privacy'), isTrue);
+    expect(routes.any((r) => r.path == '/about'), isTrue);
+    expect(routes.any((r) => r.path == '/about/dependencies'), isTrue);
   });
 }
