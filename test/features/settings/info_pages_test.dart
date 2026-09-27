@@ -372,11 +372,12 @@ void main() {
 
     expect(find.byType(Image), findsOneWidget);
     expect(find.text('小安翻译'), findsOneWidget);
-    expect(find.text('Xiaoan Translate'), findsOneWidget);
-    expect(find.text('测试版'), findsOneWidget);
+    expect(find.text('Xiaoan Translate'), findsNothing);
+    expect(find.text('测试版'), findsNothing);
     expect(find.text('版本 1.0.0 (1)'), findsOneWidget);
     expect(find.textContaining('Google ML Kit'), findsWidgets);
     expect(find.text('第三方开源库与组件'), findsOneWidget);
+    expect(find.text('项目源代码'), findsOneWidget);
     expect(find.text('轻量、私密、纯粹的设备端离线翻译工具'), findsOneWidget);
     expect(find.text('离线双向翻译'), findsOneWidget);
     expect(find.text('隐私无痕存储'), findsOneWidget);
@@ -401,13 +402,14 @@ void main() {
 
     expect(find.text('About Xiaoan Translate'), findsOneWidget);
     expect(find.text('Xiaoan Translate'), findsOneWidget);
-    expect(find.text('小安翻译'), findsOneWidget);
-    expect(find.text('Beta'), findsOneWidget);
+    expect(find.text('小安翻译'), findsNothing);
+    expect(find.text('Beta'), findsNothing);
     expect(find.text('Version 1.0.0 (1)'), findsOneWidget);
     expect(find.text('Offline Bi-Directional Translation'), findsOneWidget);
     expect(find.text('Private Local Storage'), findsOneWidget);
     expect(find.text('Native Speech Synthesis'), findsOneWidget);
     expect(find.text('Open Source Licenses & Dependencies'), findsOneWidget);
+    expect(find.text('Source Code'), findsOneWidget);
     expect(find.text('Privacy Policy'), findsOneWidget);
     expect(
       find.text('Copyright © 2026 Xiaoan Translate Team. All rights reserved.'),
@@ -436,6 +438,34 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('版本 2.0.0 (2026)'), findsOneWidget);
+  });
+
+  testWidgets('AboutPage 项目源代码使用外部浏览器打开 GitHub', (tester) async {
+    Uri? launchedUri;
+    LaunchMode? launchMode;
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: _testLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: AboutPage(
+          sourceUrlLauncher: (uri, {mode = LaunchMode.platformDefault}) async {
+            launchedUri = uri;
+            launchMode = mode;
+            return true;
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final sourceLink = find.text('项目源代码');
+    await tester.ensureVisible(sourceLink);
+    await tester.tap(sourceLink);
+    await tester.pumpAndSettle();
+
+    expect(launchedUri.toString(), projectSourceUrl);
+    expect(launchMode, LaunchMode.externalApplication);
   });
 
   testWidgets('AboutPage 点击第三方开源库与组件触发 onNavigateToDependencies', (

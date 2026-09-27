@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:xiaoan_tsl/core/widgets/app_panel.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 
+/// 项目自身的源码地址，与第三方依赖列表分别展示。
+const projectSourceUrl = 'https://github.com/Jiabaokang/xiaoan_tsl';
+
 /// 品牌化关于小安翻译主页面。
 ///
 /// 遵循 Material 3 与设计规范，呈现：
-/// 1. 顶部品牌 Header：应用图标、中英文应用名、测试版 Chip 与动态版本号；
+/// 1. 顶部品牌 Header：应用图标、当前语言的应用名与动态版本号；
 /// 2. 产品定位卡片：展示轻量、纯本地、注重隐私的定位介绍；
 /// 3. 核心特性卡片组：离线双向翻译（Google ML Kit）、本地私密存储与本地语音朗读；
-/// 4. 技术支持与服务卡片组：第三方开源库与组件入口、隐私政策入口；
+/// 4. 技术支持与服务卡片组：项目源码、第三方开源库与隐私政策入口；
 /// 5. 底部版权声明 Footer。
 class AboutPage extends StatelessWidget {
   const AboutPage({
@@ -19,6 +23,7 @@ class AboutPage extends StatelessWidget {
     this.packageInfoFuture,
     this.onNavigateToDependencies,
     this.onNavigateToPrivacy,
+    this.sourceUrlLauncher,
   });
 
   /// 可选注入的 PackageInfo Future，方便单元测试定制版本号。
@@ -29,6 +34,9 @@ class AboutPage extends StatelessWidget {
 
   /// 点击“隐私政策”时的导航回调，测试时可拦截，未指定时默认使用 [GoRouter] 跳转 `/privacy`。
   final VoidCallback? onNavigateToPrivacy;
+
+  /// 可注入的源码链接打开器，默认使用系统外部浏览器。
+  final Future<bool> Function(Uri url, {LaunchMode mode})? sourceUrlLauncher;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +64,7 @@ class AboutPage extends StatelessWidget {
             _AboutServicesCard(
               onNavigateToDependencies: onNavigateToDependencies,
               onNavigateToPrivacy: onNavigateToPrivacy,
+              sourceUrlLauncher: sourceUrlLauncher,
             ),
             const SizedBox(height: 24),
             _AboutFooter(
@@ -69,7 +78,7 @@ class AboutPage extends StatelessWidget {
   }
 }
 
-/// 顶部品牌 Header 组件，展示应用图标、中英文应用名称、测试版徽章与动态版本号。
+/// 顶部品牌 Header 组件，展示应用图标、当前语言的单行名称与动态版本号。
 class _AboutBrandHeader extends StatelessWidget {
   const _AboutBrandHeader({this.packageInfoFuture});
 
@@ -111,39 +120,12 @@ class _AboutBrandHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                '小安翻译',
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  l10n.betaBadge,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: scheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
           Text(
-            'Xiaoan Translate',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-              letterSpacing: 0.5,
+            l10n.appName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 6),
@@ -324,11 +306,12 @@ class _AboutFeatureItem extends StatelessWidget {
   }
 }
 
-/// 技术支持与服务卡片组组件，提供第三方依赖及隐私政策跳转入口。
+/// 技术支持与服务卡片组组件，提供项目源码、第三方依赖及隐私政策入口。
 class _AboutServicesCard extends StatelessWidget {
   const _AboutServicesCard({
     this.onNavigateToDependencies,
     this.onNavigateToPrivacy,
+    this.sourceUrlLauncher,
   });
 
   /// 第三方依赖页面导航回调。
@@ -336,6 +319,9 @@ class _AboutServicesCard extends StatelessWidget {
 
   /// 隐私政策页面导航回调。
   final VoidCallback? onNavigateToPrivacy;
+
+  /// 项目源码外部链接打开器。
+  final Future<bool> Function(Uri url, {LaunchMode mode})? sourceUrlLauncher;
 
   @override
   Widget build(BuildContext context) {
@@ -350,6 +336,50 @@ class _AboutServicesCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
+              leading: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child:
+                    Icon(Icons.code_outlined, size: 20, color: scheme.primary),
+              ),
+              title: Text(
+                l10n.projectSourceLabel,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: const Text('MIT · GitHub'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () async {
+                final launcher = sourceUrlLauncher ?? launchUrl;
+                try {
+                  if (await launcher(
+                    Uri.parse(projectSourceUrl),
+                    mode: LaunchMode.externalApplication,
+                  )) {
+                    return;
+                  }
+                } catch (_) {
+                  // 浏览器不可用时留在当前页面并提示用户。
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.cannotOpenUrlNotice)),
+                  );
+                }
+              },
+            ),
+            const Divider(height: 1, indent: 64),
             ListTile(
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,

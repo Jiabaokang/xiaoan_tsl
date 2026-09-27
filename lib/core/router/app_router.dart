@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:xiaoan_tsl/features/favorites/favorites_page.dart';
@@ -20,31 +21,46 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/', redirect: (context, state) => '/translate'),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, shell) => Scaffold(
-          body: shell,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: shell.currentIndex,
-            onDestinationSelected: (index) => shell.goBranch(index),
-            destinations: [
-              NavigationDestination(
-                icon: const Icon(Icons.translate),
-                label: context.l10n.navTranslate,
+        builder: (context, state, shell) {
+          final theme = Theme.of(context);
+          final barColor = theme.colorScheme.surfaceContainer;
+          return AnnotatedRegion<SystemUiOverlayStyle>(
+            value: SystemUiOverlayStyle(
+              systemNavigationBarColor: barColor,
+              systemNavigationBarIconBrightness:
+                  theme.brightness == Brightness.light
+                      ? Brightness.dark
+                      : Brightness.light,
+              systemNavigationBarContrastEnforced: false,
+            ),
+            child: Scaffold(
+              body: shell,
+              bottomNavigationBar: NavigationBar(
+                backgroundColor: barColor,
+                selectedIndex: shell.currentIndex,
+                onDestinationSelected: (index) => shell.goBranch(index),
+                destinations: [
+                  NavigationDestination(
+                    icon: const Icon(Icons.translate),
+                    label: context.l10n.navTranslate,
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.history),
+                    label: context.l10n.navHistory,
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.star_outline),
+                    label: context.l10n.navFavorites,
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.settings_outlined),
+                    label: context.l10n.navSettings,
+                  ),
+                ],
               ),
-              NavigationDestination(
-                icon: const Icon(Icons.history),
-                label: context.l10n.navHistory,
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.star_outline),
-                label: context.l10n.navFavorites,
-              ),
-              NavigationDestination(
-                icon: const Icon(Icons.settings_outlined),
-                label: context.l10n.navSettings,
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
         branches: [
           StatefulShellBranch(
             routes: [

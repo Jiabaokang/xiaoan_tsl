@@ -34,7 +34,6 @@ abstract class AppLocalizations {
 
   // 应用品牌与基础标识
   String get appName;
-  String get betaBadge;
   String get brandIconSemantics;
 
   // 底部导航栏标签
@@ -175,6 +174,7 @@ abstract class AppLocalizations {
   String get aboutFeatureTtsTitle;
   String get aboutFeatureTtsDesc;
   String get openSourceDependenciesLabel;
+  String get projectSourceLabel;
   String get openSourceDependenciesSubtitle;
   String get openSourceDependenciesTitle;
   String get openSourcePageNotice;
@@ -220,8 +220,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get appName => '小安翻译';
-  @override
-  String get betaBadge => '测试版';
   @override
   String get brandIconSemantics => '小安翻译图标';
 
@@ -489,6 +487,8 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get openSourceDependenciesLabel => '第三方开源库与组件';
   @override
+  String get projectSourceLabel => '项目源代码';
+  @override
   String get openSourceDependenciesSubtitle => '查看本应用使用的 13 个核心开源依赖';
   @override
   String get openSourceDependenciesTitle => '第三方开源库与组件';
@@ -550,8 +550,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appName => 'Xiaoan Translate';
-  @override
-  String get betaBadge => 'Beta';
   @override
   String get brandIconSemantics => 'Xiaoan Translate Icon';
 
@@ -839,6 +837,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get openSourceDependenciesLabel =>
       'Open Source Licenses & Dependencies';
+  @override
+  String get projectSourceLabel => 'Source Code';
   @override
   String get openSourceDependenciesSubtitle =>
       'View the 13 core open source dependencies used by this app';

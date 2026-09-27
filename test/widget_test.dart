@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -181,6 +182,36 @@ void main() {
     await tester.pumpAndSettle();
     expect(icon, findsOneWidget);
     expect(Theme.of(tester.element(icon)).brightness, Brightness.dark);
+  });
+
+  testWidgets('系统手势区域与底部导航栏在浅色和深色主题下同色', (tester) async {
+    await pumpApp(tester);
+    final navigationBar = find.byType(NavigationBar);
+
+    void expectSystemBar(Brightness brightness) {
+      final bar = tester.widget<NavigationBar>(navigationBar);
+      final region = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+        find.ancestor(
+          of: navigationBar,
+          matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
+        ),
+      );
+      final expectedColor =
+          Theme.of(tester.element(navigationBar)).colorScheme.surfaceContainer;
+      expect(bar.backgroundColor, expectedColor);
+      expect(region.value.systemNavigationBarColor, expectedColor);
+      expect(region.value.systemNavigationBarIconBrightness, brightness);
+      expect(region.value.systemNavigationBarContrastEnforced, isFalse);
+    }
+
+    expectSystemBar(Brightness.dark);
+    await tester.runAsync(
+      () => container
+          .read(appControllerProvider.notifier)
+          .setThemeMode(ThemeMode.dark),
+    );
+    await tester.pumpAndSettle();
+    expectSystemBar(Brightness.light);
   });
 
   testWidgets('输入后自动显示双向译文', (tester) async {
