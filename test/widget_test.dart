@@ -42,12 +42,14 @@ class _RetryModels implements TranslationModelService {
 // 内存模型列表用于核对管理页的查询、下载与删除反馈。
 class _ManagedModels implements TranslationModelService {
   final downloaded = <String>{'en'};
+  final wifiRequirements = <bool>[];
 
   @override
   Future<bool> isDownloaded(String code) async => downloaded.contains(code);
 
   @override
   Future<void> download(String code, {bool wifiOnly = true}) async {
+    wifiRequirements.add(wifiOnly);
     downloaded.add(code);
   }
 
@@ -471,7 +473,7 @@ void main() {
     await tester.runAsync(controller.initialize);
     controller.setSourceLanguage('en');
     controller.setInput('Hello, world!');
-    await tester.runAsync(controller.translate);
+    await tester.runAsync(() => controller.translate(downloadMissing: true));
     await pumpApp(tester);
 
     expect(find.text('重试翻译'), findsOneWidget);
@@ -481,6 +483,8 @@ void main() {
     await tester.drag(find.byType(Scrollable).first, const Offset(0, -180));
     await tester.pumpAndSettle();
     await tester.tap(find.text('重试翻译'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('继续下载'));
     await waitFor(
       tester,
       () =>
@@ -491,6 +495,44 @@ void main() {
       container.read(appControllerProvider).result?.translatedText,
       '你好，世界！',
     );
+  });
+
+  testWidgets('首页缺少模型时先提示，确认后用移动网络选项下载并翻译', (tester) async {
+    final models = _ManagedModels();
+    container.dispose();
+    container = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        translationServiceProvider.overrideWithValue(DemoTranslationService()),
+        languageDetectionProvider
+            .overrideWithValue(TestLanguageDetectionService()),
+        translationModelProvider.overrideWithValue(models),
+      ],
+    );
+    await tester.runAsync(
+      () => container.read(appControllerProvider.notifier).initialize(),
+    );
+    await pumpApp(tester);
+    await tester.enterText(
+        find.byKey(const Key('sourceInput')), 'Hello, world!');
+    await tester.pump(const Duration(milliseconds: 650));
+    await waitFor(tester, () => find.text('需要下载语言模型').evaluate().isNotEmpty);
+    expect(models.wifiRequirements, isEmpty);
+
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(models.wifiRequirements, isEmpty);
+    await tester.tap(find.widgetWithText(FilledButton, '需要下载语言模型'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('继续下载'));
+    await waitFor(
+        tester,
+        () =>
+            container.read(appControllerProvider).phase ==
+            TranslationPhase.success);
+    expect(models.wifiRequirements, [false]);
+    expect(
+        container.read(appControllerProvider).result?.translatedText, '你好，世界！');
   });
 
   testWidgets('离线语言包页面查询状态并支持下载和删除', (tester) async {

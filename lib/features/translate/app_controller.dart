@@ -14,6 +14,7 @@ enum TranslationPhase {
   idle,
   detecting,
   checkingModel,
+  modelDownloadRequired,
   downloadingModel,
   translating,
   success,
@@ -80,6 +81,7 @@ class AppState {
         TranslationPhase.idle => l10n.phaseReady,
         TranslationPhase.detecting => l10n.phaseDetecting,
         TranslationPhase.checkingModel => l10n.phaseCheckingModel,
+        TranslationPhase.modelDownloadRequired => l10n.modelDownloadRequired,
         TranslationPhase.downloadingModel => l10n.phaseDownloadingModel,
         TranslationPhase.translating => l10n.phaseTranslating,
         TranslationPhase.success => l10n.phaseSuccess,
@@ -282,7 +284,7 @@ class AppController extends Notifier<AppState> {
     return true;
   }
 
-  Future<void> translate({bool wifiOnly = true}) async {
+  Future<void> translate({bool downloadMissing = false}) async {
     final text = state.input.trim();
     if (text.isEmpty || state.phase.isBusy) return;
     if (text.length > 5000) {
@@ -349,11 +351,18 @@ class AppController extends Notifier<AppState> {
         final downloaded = await models.isDownloaded(code);
         if (!ref.mounted || request != _request) return;
         if (!downloaded) {
+          if (!downloadMissing) {
+            state = state.copyWith(
+              phase: TranslationPhase.modelDownloadRequired,
+              message: '需要下载语言模型',
+            );
+            return;
+          }
           state = state.copyWith(
             phase: TranslationPhase.downloadingModel,
             message: '正在准备离线翻译模型',
           );
-          await models.download(code, wifiOnly: wifiOnly);
+          await models.download(code, wifiOnly: false);
           if (!ref.mounted || request != _request) return;
         }
       }

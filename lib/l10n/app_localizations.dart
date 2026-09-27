@@ -63,6 +63,8 @@ abstract class AppLocalizations {
   String get startTranslation;
   String get translateAgain;
   String get retryTranslation;
+  String get modelDownloadRequired;
+  String get modelDownloadDialogContent;
   String get allowMobileDownload;
   String get mobileDownloadDialogTitle;
   String get mobileDownloadDialogContent;
@@ -268,6 +270,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get retryTranslation => '重试翻译';
   @override
+  String get modelDownloadRequired => '需要下载语言模型';
+  @override
+  String get modelDownloadDialogContent =>
+      '当前语言所需的模型尚未下载。下载可能使用移动流量，完成后会自动继续翻译。';
+  @override
   String get allowMobileDownload => '允许移动网络下载';
   @override
   String get mobileDownloadDialogTitle => '使用移动网络下载模型？';
@@ -444,7 +451,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get privacySection2Title => '离线模型与网络隔离';
   @override
   String get privacySection2Content =>
-      'Google ML Kit 在设备端识别和翻译文字。首次使用尚未安装的语言模型时需要联网下载，默认仅用 Wi-Fi；下载失败后可明确选择移动数据。';
+      'Google ML Kit 在设备端识别和翻译文字。首次使用尚未安装的语言模型时需要联网下载；首页会先征求确认，确认后本次下载也可使用移动数据。';
   @override
   String get privacySection3Title => '语音与系统分享安全';
   @override
@@ -592,6 +599,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get translateAgain => 'Translate Again';
   @override
   String get retryTranslation => 'Retry';
+  @override
+  String get modelDownloadRequired => 'Language model required';
+  @override
+  String get modelDownloadDialogContent =>
+      'A model for this language is missing. Downloading may use cellular data. Translation will continue when it is ready.';
   @override
   String get allowMobileDownload => 'Allow download via cellular';
   @override
@@ -787,7 +799,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get privacySection2Title => 'Offline Models & Network Isolation';
   @override
   String get privacySection2Content =>
-      'Google ML Kit identifies languages and translates text on-device. A missing language model needs a network download, using Wi-Fi by default. After a failed download, you may explicitly allow mobile data.';
+      'Google ML Kit identifies languages and translates text on-device. A missing language model needs a network download. The home screen asks for confirmation first; the confirmed download may use cellular data.';
   @override
   String get privacySection3Title => 'Speech & System Sharing Security';
   @override

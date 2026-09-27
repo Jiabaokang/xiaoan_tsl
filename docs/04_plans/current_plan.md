@@ -1,7 +1,7 @@
 # 小安翻译 v1.0 活跃执行计划 (Current Execution Plan)
 
 > **当前阶段**：v1.0 冲刺收官与 Google Play 准入就绪阶段  
-> **当前验证**：核心框架、本地 SQLite 数据库、ML Kit 翻译和多语种选择已实现；39 项测试通过，`flutter analyze` 无问题。
+> **当前验证**：核心框架、本地 SQLite 数据库、ML Kit 翻译和多语种选择已实现；69 项测试通过，`flutter analyze` 无问题。OnePlus 6 已验证首页缺模型提示、确认下载与续译；移动流量下载尚未实测。
 > **执行依据**：严格遵循 `docs/01_prd/prd_v1.0.md` 与 `docs/03_specs/` 各专项规格。
 > **历史步骤**：[核心框架实施计划](../superpowers/plans/2026-09-24-core-framework.md)与[v1 剩余功能实施计划](../superpowers/plans/2026-09-24-v1-completion.md)保留编写时的任务快照；本文件记录当前进度。
 
@@ -19,7 +19,7 @@
 - [x] 2.1 离线模型列表查询、手动下载与删除实现（已通过基础单测）
 - [x] 2.2 完善模型删除保护与蜂窝网络下载确认
   - **目标文件**：`lib/features/language/offline_models_page.dart`
-  - **验收结果**：翻译进行中（`state.phase.isBusy`）禁用模型删除；非 Wi-Fi 环境下载弹出流量提示确认对话框。Android 实体机已验证真实模型查询与下载状态（中/英已就绪）。
+  - **验收结果**：翻译进行中（`state.phase.isBusy`）禁用模型删除；管理页下载失败后可确认使用移动流量重试。首页缺模型时先确认，再允许本次下载使用移动网络并自动续译；OnePlus 6 已在 Wi-Fi 下完成真实模型下载与英中翻译。
 
 ### 阶段三：应用合规、关于与隐私信息真实化（V1-07）
 - [x] 3.1 动态读取真实版本与构建号

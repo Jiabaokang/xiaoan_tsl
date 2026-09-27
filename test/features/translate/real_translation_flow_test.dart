@@ -109,7 +109,7 @@ void main() {
     final controller = container.read(appControllerProvider.notifier);
     controller.setSourceLanguage('en');
     controller.setInput('Hello, world!');
-    await controller.translate();
+    await controller.translate(downloadMissing: true);
 
     expect(detector.calls, 1);
     expect(models.checked, ['en', 'zh']);
@@ -121,13 +121,29 @@ void main() {
     expect((await store.search('')).single.engine, 'mlkit');
   });
 
+  test('缺少模型时先等待用户确认，不自动下载', () async {
+    final controller = container.read(appControllerProvider.notifier);
+    controller.setInput('Hello, world!');
+    await controller.translate();
+
+    expect(container.read(appControllerProvider).phase,
+        TranslationPhase.modelDownloadRequired);
+    expect(models.downloads, isEmpty);
+    expect(await store.search(''), isEmpty);
+
+    await controller.translate(downloadMissing: true);
+    expect(
+        container.read(appControllerProvider).phase, TranslationPhase.success);
+    expect(models.downloads, ['en', 'zh']);
+  });
+
   test('输入属于译文语言时自动反向翻译并保存实际语言方向', () async {
     detector.result = 'zh';
     final controller = container.read(appControllerProvider.notifier);
     controller.setSourceLanguage('en');
     controller.setTargetLanguage('zh');
     controller.setInput('你好，世界！');
-    await controller.translate();
+    await controller.translate(downloadMissing: true);
 
     final result = container.read(appControllerProvider).result;
     expect(result?.sourceLanguage, 'zh');
@@ -151,7 +167,7 @@ void main() {
   test('默认译文语言改变后撤销旧译文并保持两种不同语言', () async {
     final controller = container.read(appControllerProvider.notifier);
     controller.setInput('Hello, world!');
-    await controller.translate();
+    await controller.translate(downloadMissing: true);
     expect(container.read(appControllerProvider).result, isNotNull);
 
     await controller.setDefaultTargetLanguage('en');
@@ -178,7 +194,7 @@ void main() {
     final controller = container.read(appControllerProvider.notifier);
     controller.setSourceLanguage('en');
     controller.setInput('Hello');
-    await controller.translate();
+    await controller.translate(downloadMissing: true);
 
     final result = container.read(appControllerProvider).result;
     expect(result?.sourceLanguage, 'en');
@@ -191,14 +207,14 @@ void main() {
     final controller = container.read(appControllerProvider.notifier);
     controller.setSourceLanguage('en');
     controller.setInput('Hello, world!');
-    await controller.translate();
+    await controller.translate(downloadMissing: true);
     expect(container.read(appControllerProvider).phase, TranslationPhase.error);
     expect(container.read(appControllerProvider).message, contains('模型'));
     expect(container.read(appControllerProvider).input, 'Hello, world!');
     expect(await store.search(''), isEmpty);
 
     models.failDownload = false;
-    await controller.translate();
+    await controller.translate(downloadMissing: true);
     expect(
       container.read(appControllerProvider).phase,
       TranslationPhase.success,
@@ -211,7 +227,7 @@ void main() {
     final controller = container.read(appControllerProvider.notifier);
     controller.setSourceLanguage('en');
     controller.setInput('Hello, world!');
-    final pending = controller.translate();
+    final pending = controller.translate(downloadMissing: true);
     await models.started.future.timeout(const Duration(seconds: 2));
     controller.setInput('New text');
     models.gate!.complete();

@@ -2,6 +2,11 @@
 
 每次提交涉及 `docs/`、`AGENTS.md` 或根目录 `README.md` 的修改时，在顶部新增一条记录。一个提交或一批相关修改写一条；日期使用本地日期，说明修改内容、原因和相关文件。Git 历史保留逐行差异，本文件方便按时间查找文档变更。
 
+## 2026-09-27 — 首页缺模型时确认下载并允许移动网络
+
+- 更新 [产品需求](01_prd/prd_v1.0.md)、[状态机规格](03_specs/state_machine.md) 与 [活跃执行计划](04_plans/current_plan.md)：首页检测到缺少翻译模型时先征求确认，确认后允许本次使用移动网络，下载完成自动续译；修正原先默认 Wi-Fi 与拒绝下载转错误状态的旧描述。
+- 原因与验证：避免首次使用需等待 Wi-Fi 或前往设置页；`flutter analyze` 无问题，69 项 Flutter 测试通过，OnePlus 6 已在 Wi-Fi 下验证提示、下载与续译，蜂窝网络未实测。
+
 ## 2026-09-26 — 外观模式的显示和选择调整为和应用语言一致
 
 - 交互对齐与视觉一致性：修改 [SettingsPage](../lib/features/settings/settings_page.dart)，将外观模式从行内下拉菜单（DropdownButton）重构为与应用语言完全一致的标准 ListTile（显示当前模式副标题与右侧箭头），点击整行呼出包含跟随系统、浅色、深色并带选中对勾标记（`Icons.check`）的 SimpleDialog 单选弹窗，调用 `AppController.setThemeMode` 进行即时响应与本地持久化。

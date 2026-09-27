@@ -125,14 +125,14 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
     }
   }
 
-  // 用户确认流量提示后，才允许本次模型下载使用移动网络。
-  Future<void> _retryWithMobileData() async {
+  // 缺少模型时由用户确认本次下载，移动网络也可使用。
+  Future<void> _confirmModelDownload() async {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.mobileDownloadDialogTitle),
-        content: Text(l10n.mobileDownloadDialogContent),
+        title: Text(l10n.modelDownloadRequired),
+        content: Text(l10n.modelDownloadDialogContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -146,12 +146,28 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
       ),
     );
     if (confirmed == true && mounted) {
-      await ref.read(appControllerProvider.notifier).translate(wifiOnly: false);
+      await ref.read(appControllerProvider.notifier).translate(
+            downloadMissing: true,
+          );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(
+      appControllerProvider.select((state) => state.phase),
+      (previous, next) {
+        if (next == TranslationPhase.modelDownloadRequired) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted &&
+                ref.read(appControllerProvider).phase ==
+                    TranslationPhase.modelDownloadRequired) {
+              _confirmModelDownload();
+            }
+          });
+        }
+      },
+    );
     ref.listen(
       appControllerProvider.select(
         (state) => (state.sourceLanguage, state.targetLanguage),
@@ -200,8 +216,6 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
             const SizedBox(width: 9),
             Text(l10n.appName,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(width: 8),
-            Text(l10n.betaBadge, style: theme.textTheme.labelSmall),
           ],
         ),
       ),
@@ -334,7 +348,9 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                       state.phase.isBusy ||
                       !state.loaded
                   ? null
-                  : controller.translate,
+                  : state.phase == TranslationPhase.modelDownloadRequired
+                      ? _confirmModelDownload
+                      : controller.translate,
               icon: state.phase.isBusy
                   ? const SizedBox(
                       width: 18,
@@ -343,11 +359,13 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                     )
                   : const Icon(Icons.arrow_forward),
               label: Text(
-                state.phase.isBusy
-                    ? state.localizedMessage(l10n)
-                    : state.phase == TranslationPhase.success
-                        ? l10n.translateAgain
-                        : l10n.startTranslation,
+                state.phase == TranslationPhase.modelDownloadRequired
+                    ? l10n.modelDownloadRequired
+                    : state.phase.isBusy
+                        ? state.localizedMessage(l10n)
+                        : state.phase == TranslationPhase.success
+                            ? l10n.translateAgain
+                            : l10n.startTranslation,
               ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(51),
@@ -358,14 +376,11 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                 state.failure != TranslationFailure.detection) ...[
               const SizedBox(height: 8),
               OutlinedButton(
-                onPressed: controller.translate,
+                onPressed: state.failure == TranslationFailure.modelDownload
+                    ? _confirmModelDownload
+                    : controller.translate,
                 child: Text(l10n.retryTranslation),
               ),
-              if (state.failure == TranslationFailure.modelDownload)
-                TextButton(
-                  onPressed: _retryWithMobileData,
-                  child: Text(l10n.allowMobileDownload),
-                ),
             ],
             const SizedBox(height: 13),
             AppPanel(

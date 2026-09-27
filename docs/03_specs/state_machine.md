@@ -14,6 +14,7 @@ enum TranslationPhase {
   idle,             // 空闲/等待输入
   detecting,        // 正在进行语言自动检测
   checkingModel,    // 正在检查源/目标语言离线模型是否存在
+  modelDownloadRequired, // 缺少模型，等待用户确认下载
   downloadingModel, // 正在后台下载所需的离线语言模型 (可能耗时较长)
   translating,      // 模型就绪，正在进行设备端推理翻译
   success,          // 翻译完成，成功产出译文
@@ -49,17 +50,21 @@ stateDiagram-v2
     detecting --> idle: 文本 < 4 字符 / 置信度不足 (提示用户手选)
     detecting --> checkingModel: 识别成功得到有效语言代码
 
-    checkingModel --> downloadingModel: 本地缺失源或目标语言模型
+    checkingModel --> modelDownloadRequired: 本地缺失模型，尚未获下载确认
+    checkingModel --> downloadingModel: 已确认本次下载且模型缺失
     checkingModel --> translating: 两个模型均已在本地就绪
+    modelDownloadRequired --> detecting: 用户确认下载后重新检查语言与模型
+    modelDownloadRequired --> idle: 用户修改或清空输入
 
     downloadingModel --> translating: 模型下载成功完成
-    downloadingModel --> error: 网络中断 / 下载超时 / 用户拒绝流量下载
+    downloadingModel --> checkingModel: 继续检查另一语言模型
+    downloadingModel --> error: 网络中断 / 下载失败
 
     translating --> success: 设备端翻译成功，输出结果
     translating --> error: 推理异常 / 内存不足
 
     success --> idle: 用户清空输入框
-    error --> downloadingModel: 用户点击重试 (若因下载失败)
+    error --> detecting: 用户确认重试下载
     error --> translating: 用户点击重试 (若因翻译执行失败)
     error --> idle: 用户重新修改输入或切换语言
 ```
@@ -96,5 +101,5 @@ stateDiagram-v2
 |---|---|---|---|
 | **文本过短 / 无法识别** | `文本过短或无法确定语言，请手动选择语言` | 回退至 `idle`，保留输入 | 用户手动点击语言选择器选择明确语种 |
 | **同语种翻译** | `源语言与目标语言相同，无需翻译` | 回退至 `idle`，保留输入 | 提示用户调整目标语言 |
-| **模型下载失败** | `语言模型下载失败，请检查网络后重试` | 转入 `error` 阶段 | UI 显示“重试”按钮，点击重新触发 `downloadModel` |
+| **模型下载失败** | `语言模型下载失败，请检查网络后重试` | 转入 `error` 阶段 | UI 显示“重试”按钮，确认后重新检查并下载模型 |
 | **设备端推理失败** | `翻译服务暂时不可用，请稍后重试` | 转入 `error` 阶段 | UI 显示“重试”按钮，点击重新触发 `translate` |
