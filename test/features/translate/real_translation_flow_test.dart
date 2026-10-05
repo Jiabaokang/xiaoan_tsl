@@ -61,12 +61,51 @@ class _Translator implements TranslationService {
   String get engineId => 'mlkit';
 
   @override
+  bool get requiresMlKitModels => true;
+
+  @override
   Future<String> translate({
     required String text,
     required String sourceLanguage,
     required String targetLanguage,
   }) async =>
       '真实译文';
+}
+
+// 在线服务替身：不检查模型，结果引擎为 baidu。
+class _OnlineTranslator implements TranslationService {
+  @override
+  String get engineId => 'baidu';
+
+  @override
+  bool get requiresMlKitModels => false;
+
+  @override
+  Future<String> translate({
+    required String text,
+    required String sourceLanguage,
+    required String targetLanguage,
+  }) async =>
+      '在线译文';
+}
+
+// 延迟完成的在线服务，用于验证服务切换后旧结果失效。
+class _DeferredOnlineTranslator implements TranslationService {
+  final completer = Completer<String>();
+
+  @override
+  String get engineId => 'baidu';
+
+  @override
+  bool get requiresMlKitModels => false;
+
+  @override
+  Future<String> translate({
+    required String text,
+    required String sourceLanguage,
+    required String targetLanguage,
+  }) =>
+      completer.future;
 }
 
 void main() {
@@ -234,6 +273,55 @@ void main() {
     await pending;
 
     expect(container.read(appControllerProvider).result, isNull);
+    expect(await store.search(''), isEmpty);
+  });
+
+  test('在线服务不检查或下载模型，结果引擎为 baidu', () async {
+    final online = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        languageDetectionProvider.overrideWithValue(detector),
+        translationModelProvider.overrideWithValue(models),
+        translationServiceProvider.overrideWithValue(_OnlineTranslator()),
+      ],
+    );
+    addTearDown(online.dispose);
+    final controller = online.read(appControllerProvider.notifier);
+    await controller.initialize();
+    controller.setSourceLanguage('en');
+    controller.setInput('Hello, world!');
+    await controller.translate(downloadMissing: true);
+
+    expect(models.checked, isEmpty);
+    expect(models.downloads, isEmpty);
+    final state = online.read(appControllerProvider);
+    expect(state.result?.translatedText, '在线译文');
+    expect(state.result?.engine, 'baidu');
+    expect((await store.search('')).single.engine, 'baidu');
+  });
+
+  test('切换翻译服务后旧请求结果不更新界面也不写入历史', () async {
+    final service = _DeferredOnlineTranslator();
+    final switching = ProviderContainer(
+      overrides: [
+        localStoreProvider.overrideWithValue(store),
+        languageDetectionProvider.overrideWithValue(detector),
+        translationModelProvider.overrideWithValue(models),
+        translationServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(switching.dispose);
+    final controller = switching.read(appControllerProvider.notifier);
+    await controller.initialize();
+    controller.setSourceLanguage('en');
+    controller.setInput('Hello, world!');
+    final pending = controller.translate();
+    await pumpEventQueue();
+    await controller.setTranslationEngine('mlkit');
+    service.completer.complete('旧在线译文');
+    await pending;
+
+    expect(switching.read(appControllerProvider).result, isNull);
     expect(await store.search(''), isEmpty);
   });
 }

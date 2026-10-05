@@ -6,6 +6,7 @@ import 'package:xiaoan_tsl/features/history/history_store.dart';
 import 'package:xiaoan_tsl/features/language/app_languages.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 import 'package:xiaoan_tsl/services/language/language_detection_provider.dart';
+import 'package:xiaoan_tsl/services/translation/baidu_translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
 
@@ -35,6 +36,7 @@ enum TranslationFailure {
   modelDownload,
   translation,
   storage,
+  config,
 }
 
 // 首页、历史、收藏及设置共用的一份应用状态。
@@ -95,6 +97,7 @@ class AppState {
             TranslationFailure.modelCheck => l10n.errorModelCheck,
             TranslationFailure.modelDownload => l10n.errorModelDownload,
             TranslationFailure.translation => l10n.errorTranslation,
+            TranslationFailure.config => l10n.errorConfigMissing,
             TranslationFailure.storage => message == '无法将结果写入历史'
                 ? l10n.errorStorageSave
                 : l10n.errorStorage,
@@ -258,6 +261,19 @@ class AppController extends Notifier<AppState> {
     if (ref.mounted) state = state.copyWith(localeMode: mode);
   }
 
+  // 切换翻译服务并让旧请求立即失效；输入保留，旧结果不更新 UI 也不入历史。
+  Future<void> setTranslationEngine(String engine) async {
+    await ref.read(translationEngineProvider.notifier).setEngine(engine);
+    if (!ref.mounted) return;
+    _request++;
+    state = state.copyWith(
+      result: null,
+      phase: TranslationPhase.idle,
+      failure: TranslationFailure.none,
+      message: '等待翻译',
+    );
+  }
+
   bool swapLanguages() {
     final resolved = state.sourceLanguage == 'auto'
         ? state.detectedLanguage
@@ -298,6 +314,8 @@ class AppController extends Notifier<AppState> {
     final selectedSource = state.sourceLanguage;
     final selectedTarget = state.targetLanguage;
     final request = ++_request;
+    // 请求开始固定本次使用的服务实例，避免识别或模型准备期间服务切换。
+    final service = ref.read(translationServiceProvider);
     state = state.copyWith(
       phase: TranslationPhase.detecting,
       failure: TranslationFailure.none,
@@ -342,35 +360,37 @@ class AppController extends Notifier<AppState> {
         return;
       }
       state = state.copyWith(detectedLanguage: source);
-      final models = ref.read(translationModelProvider);
-      for (final code in {source, target}) {
-        state = state.copyWith(
-          phase: TranslationPhase.checkingModel,
-          message: '正在检查离线模型',
-        );
-        final downloaded = await models.isDownloaded(code);
-        if (!ref.mounted || request != _request) return;
-        if (!downloaded) {
-          if (!downloadMissing) {
-            state = state.copyWith(
-              phase: TranslationPhase.modelDownloadRequired,
-              message: '需要下载语言模型',
-            );
-            return;
-          }
+      // 模型检查与下载只属于 ML Kit 服务；在线服务不读取模型 Provider。
+      if (service.requiresMlKitModels) {
+        final models = ref.read(translationModelProvider);
+        for (final code in {source, target}) {
           state = state.copyWith(
-            phase: TranslationPhase.downloadingModel,
-            message: '正在准备离线翻译模型',
+            phase: TranslationPhase.checkingModel,
+            message: '正在检查离线模型',
           );
-          await models.download(code, wifiOnly: false);
+          final downloaded = await models.isDownloaded(code);
           if (!ref.mounted || request != _request) return;
+          if (!downloaded) {
+            if (!downloadMissing) {
+              state = state.copyWith(
+                phase: TranslationPhase.modelDownloadRequired,
+                message: '需要下载语言模型',
+              );
+              return;
+            }
+            state = state.copyWith(
+              phase: TranslationPhase.downloadingModel,
+              message: '正在准备离线翻译模型',
+            );
+            await models.download(code, wifiOnly: false);
+            if (!ref.mounted || request != _request) return;
+          }
         }
       }
       state = state.copyWith(
         phase: TranslationPhase.translating,
-        message: '正在设备端翻译',
+        message: '正在翻译',
       );
-      final service = ref.read(translationServiceProvider);
       final translated = await service.translate(
         text: text,
         sourceLanguage: source,
@@ -409,8 +429,17 @@ class AppController extends Notifier<AppState> {
           );
         }
       }
-    } catch (_) {
+    } catch (error) {
       if (ref.mounted && request == _request) {
+        // 缺少凭据属于配置错误，给出明确的设置恢复入口文案。
+        if (error is BaiduConfigException) {
+          state = state.copyWith(
+            phase: TranslationPhase.error,
+            failure: TranslationFailure.config,
+            message: '缺少翻译凭据，请到设置中配置',
+          );
+          return;
+        }
         final failure = switch (state.phase) {
           TranslationPhase.detecting => TranslationFailure.detection,
           TranslationPhase.checkingModel => TranslationFailure.modelCheck,
@@ -430,6 +459,12 @@ class AppController extends Notifier<AppState> {
         );
       }
     }
+  }
+
+  // 从本地重新加载历史记录；截图翻译保存历史后调用，保持历史页数据新鲜。
+  Future<void> refreshRecords() async {
+    final records = await ref.read(localStoreProvider).search('');
+    if (ref.mounted) state = state.copyWith(records: records);
   }
 
   Future<void> openRecordById(String id) async {

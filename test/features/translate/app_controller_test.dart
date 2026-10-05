@@ -24,6 +24,9 @@ class _DeferredService implements TranslationService {
   String get engineId => 'demo';
 
   @override
+  bool get requiresMlKitModels => false;
+
+  @override
   Future<String> translate({
     required String text,
     required String sourceLanguage,

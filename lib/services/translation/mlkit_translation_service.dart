@@ -8,6 +8,10 @@ class MlKitTranslationService implements TranslationService {
   @override
   String get engineId => 'mlkit';
 
+  // ML Kit 服务必须先完成模型检查与下载，不能直接调用翻译。
+  @override
+  bool get requiresMlKitModels => true;
+
   @override
   Future<String> translate({
     required String text,

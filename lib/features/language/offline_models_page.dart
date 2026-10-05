@@ -6,6 +6,7 @@ import 'package:xiaoan_tsl/features/translate/app_controller.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/translate_language_code.dart';
+import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
 
 // 从 ML Kit 读取实时模型状态，提供下载与删除操作。
 class OfflineModelsPage extends ConsumerStatefulWidget {
@@ -29,6 +30,10 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
   }
 
   Future<Map<String, bool>> _loadStatus() async {
+    // 不支持 ML Kit 的平台直接路由保护：不读取模型 Provider，避免创建插件对象。
+    if (ref.read(translationPlatformProvider) == TranslationPlatform.macOS) {
+      return const {};
+    }
     final models = ref.read(translationModelProvider);
     final status = <String, bool>{};
     for (final code in appLanguages.keys) {
@@ -106,6 +111,14 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
       appControllerProvider.select((state) => state.phase.isBusy),
     );
     final l10n = context.l10n;
+
+    // 不支持 ML Kit 的平台直接展示说明，不初始化模型管理。
+    if (ref.watch(translationPlatformProvider) == TranslationPlatform.macOS) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.offlineModelsLabel)),
+        body: Center(child: Text(l10n.offlineModelsUnsupported)),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.offlineModelsLabel)),

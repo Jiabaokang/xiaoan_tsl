@@ -121,7 +121,7 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    '${l10n.languageName(record.sourceLanguage)} → ${l10n.languageName(record.targetLanguage)} · ${record.engine == 'mlkit' ? l10n.onDeviceRecord : l10n.demoRecord}',
+                                    '${l10n.languageName(record.sourceLanguage)} → ${l10n.languageName(record.targetLanguage)} · ${l10n.engineName(record.engine)}',
                                     style: Theme.of(
                                       context,
                                     ).textTheme.labelSmall,

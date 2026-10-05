@@ -373,13 +373,23 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
             ),
             if (state.phase == TranslationPhase.error &&
                 state.failure != TranslationFailure.unsupportedLanguage &&
-                state.failure != TranslationFailure.detection) ...[
+                state.failure != TranslationFailure.detection &&
+                state.failure != TranslationFailure.config) ...[
               const SizedBox(height: 8),
               OutlinedButton(
                 onPressed: state.failure == TranslationFailure.modelDownload
                     ? _confirmModelDownload
                     : controller.translate,
                 child: Text(l10n.retryTranslation),
+              ),
+            ],
+            if (state.phase == TranslationPhase.error &&
+                state.failure == TranslationFailure.config) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/translation-service'),
+                icon: const Icon(Icons.tune),
+                label: Text(l10n.goToTranslationService),
               ),
             ],
             const SizedBox(height: 13),
@@ -423,9 +433,12 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                     ),
                     if (state.result != null)
                       Text(
-                        state.result!.engine == 'demo'
-                            ? l10n.demoDisclaimer
-                            : l10n.googleDisclaimer,
+                        switch (state.result!.engine) {
+                          'demo' => l10n.demoDisclaimer,
+                          'baidu' => l10n.baiduDisclaimer,
+                          'apple' => l10n.appleDisclaimer,
+                          _ => l10n.googleDisclaimer,
+                        },
                         style: theme.textTheme.labelSmall,
                       ),
                     Divider(color: theme.colorScheme.outlineVariant),
