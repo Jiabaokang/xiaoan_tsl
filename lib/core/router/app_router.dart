@@ -7,10 +7,12 @@ import 'package:xiaoan_tsl/features/favorites/favorites_page.dart';
 import 'package:xiaoan_tsl/features/language/language_page.dart';
 import 'package:xiaoan_tsl/features/language/offline_models_page.dart';
 import 'package:xiaoan_tsl/features/history/records_page.dart';
+import 'package:xiaoan_tsl/features/screenshot/screenshot_result_page.dart';
 import 'package:xiaoan_tsl/features/settings/about_page.dart';
 import 'package:xiaoan_tsl/features/settings/open_source_licenses_page.dart';
 import 'package:xiaoan_tsl/features/settings/privacy_policy_page.dart';
 import 'package:xiaoan_tsl/features/settings/settings_page.dart';
+import 'package:xiaoan_tsl/features/settings/translation_service_page.dart';
 import 'package:xiaoan_tsl/features/translate/translation_home_page.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 
@@ -107,6 +109,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/offline-models',
         builder: (context, state) => const OfflineModelsPage(),
+      ),
+      GoRoute(
+        path: '/translation-service',
+        builder: (context, state) => const TranslationServicePage(),
+      ),
+      GoRoute(
+        path: '/screenshot-result',
+        builder: (context, state) => const ScreenshotResultPage(),
       ),
       GoRoute(
         path: '/privacy',

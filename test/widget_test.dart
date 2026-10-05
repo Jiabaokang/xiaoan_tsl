@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +20,7 @@ import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/mlkit_model_service.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
+import 'package:xiaoan_tsl/services/translation/translation_settings.dart';
 import 'package:xiaoan_tsl/services/speech/speech_service_provider.dart';
 import 'package:xiaoan_tsl/services/speech/tts_service.dart';
 
@@ -38,6 +40,22 @@ class _RetryModels implements TranslationModelService {
 
   @override
   Future<void> delete(String code) async {}
+}
+
+// 需要 ML Kit 模型流程的翻译替身：模型下载类组件测试专用。
+class _ModelRequiredTranslator implements TranslationService {
+  @override
+  String get engineId => 'demo';
+
+  @override
+  bool get requiresMlKitModels => true;
+
+  @override
+  Future<String> translate({
+    required String text,
+    required String sourceLanguage,
+    required String targetLanguage,
+  }) async => '你好，世界！';
 }
 
 // 内存模型列表用于核对管理页的查询、下载与删除反馈。
@@ -148,6 +166,74 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('macOS 设置主页可选择并保存全局截图快捷键，冲突保留旧设置', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    container.invalidate(translationPlatformProvider);
+    const channel = MethodChannel('xiaoan_tsl/macos_desktop');
+    var conflict = false;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+      call,
+    ) async {
+      if (call.method == 'updateShortcut' && conflict) {
+        throw PlatformException(code: 'shortcutConflict');
+      }
+      return null;
+    });
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        channel,
+        null,
+      ),
+    );
+    // 使用真实服务 Provider，事件流边界仅替换系统通道。
+    const events = MethodChannel('xiaoan_tsl/macos_desktop_events');
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      events,
+      (_) async => null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        events,
+        null,
+      ),
+    );
+    await pumpApp(tester);
+    await tester.tap(find.text('设置').last);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('screenshotShortcutTile')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('screenshotShortcutTile')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('shortcutOption_Control+Shift+T')));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      await tester.runAsync(
+        () => store.getSetting(TranslationSettingKeys.screenshotShortcut),
+      ),
+      'Control+Shift+T',
+    );
+    expect(find.textContaining('Control + Shift + T'), findsOneWidget);
+    // 等成功提示消失，再验证下一次操作的冲突提示，避免 SnackBar 排队遮挡断言。
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    conflict = true;
+    await tester.tap(find.byKey(const Key('screenshotShortcutTile')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('shortcutOption_Command+Option+T')));
+    await tester.pumpAndSettle();
+    expect(
+      await tester.runAsync(
+        () => store.getSetting(TranslationSettingKeys.screenshotShortcut),
+      ),
+      'Control+Shift+T',
+    );
+    expect(find.text('快捷键注册失败或与其他应用冲突，已保留原设置'), findsOneWidget);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   Future<void> waitFor(WidgetTester tester, bool Function() condition) async {
     for (var i = 0; i < 100 && !condition(); i++) {
       await tester.runAsync(
@@ -158,7 +244,8 @@ void main() {
     expect(
       condition(),
       isTrue,
-      reason: 'state: ${container.read(appControllerProvider).phase}, '
+      reason:
+          'state: ${container.read(appControllerProvider).phase}, '
           'input: ${container.read(appControllerProvider).input}, '
           'message: ${container.read(appControllerProvider).message}',
     );
@@ -196,8 +283,9 @@ void main() {
           matching: find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
         ),
       );
-      final expectedColor =
-          Theme.of(tester.element(navigationBar)).colorScheme.surfaceContainer;
+      final expectedColor = Theme.of(
+        tester.element(navigationBar),
+      ).colorScheme.surfaceContainer;
       expect(bar.backgroundColor, expectedColor);
       expect(region.value.systemNavigationBarColor, expectedColor);
       expect(region.value.systemNavigationBarIconBrightness, brightness);
@@ -431,6 +519,11 @@ void main() {
       Theme.of(tester.element(find.text('设置').first)).brightness,
       Brightness.dark,
     );
+    await tester.scrollUntilVisible(
+      find.text('离线语言包'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text('离线语言包'));
     await tester.pumpAndSettle();
     await waitFor(
@@ -441,8 +534,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('清空翻译历史'), findsOneWidget);
 
-    await tester.drag(find.byType(ListView).last, const Offset(0, -100));
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('关于小安翻译'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text('关于小安翻译'));
     await tester.pumpAndSettle();
     expect(find.text('版本 1.0.0 (1)'), findsOneWidget);
@@ -456,8 +552,11 @@ void main() {
     expect(find.text('关于小安翻译'), findsOneWidget);
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -100));
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('隐私政策'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.text('隐私政策'));
     await tester.pumpAndSettle();
     expect(find.textContaining('关闭系统备份'), findsOneWidget);
@@ -493,7 +592,9 @@ void main() {
     container = ProviderContainer(
       overrides: [
         localStoreProvider.overrideWithValue(store),
-        translationServiceProvider.overrideWithValue(DemoTranslationService()),
+        translationServiceProvider.overrideWithValue(
+          _ModelRequiredTranslator(),
+        ),
         languageDetectionProvider.overrideWithValue(
           TestLanguageDetectionService(),
         ),
@@ -534,9 +635,12 @@ void main() {
     container = ProviderContainer(
       overrides: [
         localStoreProvider.overrideWithValue(store),
-        translationServiceProvider.overrideWithValue(DemoTranslationService()),
-        languageDetectionProvider
-            .overrideWithValue(TestLanguageDetectionService()),
+        translationServiceProvider.overrideWithValue(
+          _ModelRequiredTranslator(),
+        ),
+        languageDetectionProvider.overrideWithValue(
+          TestLanguageDetectionService(),
+        ),
         translationModelProvider.overrideWithValue(models),
       ],
     );
@@ -545,7 +649,9 @@ void main() {
     );
     await pumpApp(tester);
     await tester.enterText(
-        find.byKey(const Key('sourceInput')), 'Hello, world!');
+      find.byKey(const Key('sourceInput')),
+      'Hello, world!',
+    );
     await tester.pump(const Duration(milliseconds: 650));
     await waitFor(tester, () => find.text('需要下载语言模型').evaluate().isNotEmpty);
     expect(models.wifiRequirements, isEmpty);
@@ -557,13 +663,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('继续下载'));
     await waitFor(
-        tester,
-        () =>
-            container.read(appControllerProvider).phase ==
-            TranslationPhase.success);
+      tester,
+      () =>
+          container.read(appControllerProvider).phase ==
+          TranslationPhase.success,
+    );
     expect(models.wifiRequirements, [false]);
     expect(
-        container.read(appControllerProvider).result?.translatedText, '你好，世界！');
+      container.read(appControllerProvider).result?.translatedText,
+      '你好，世界！',
+    );
   });
 
   testWidgets('离线语言包页面查询状态并支持下载和删除', (tester) async {
@@ -775,9 +884,7 @@ void main() {
     expect(container.read(appControllerProvider).targetLanguage, 'en');
   });
 
-  testWidgets('跟随系统语言：系统语言为英文时自动显示英文界面，为中文时自动显示中文界面', (
-    tester,
-  ) async {
+  testWidgets('跟随系统语言：系统语言为英文时自动显示英文界面，为中文时自动显示中文界面', (tester) async {
     // 模拟系统语言为英文
     tester.platformDispatcher.localesTestValue = const [Locale('en', 'US')];
     addTearDown(tester.platformDispatcher.clearLocalesTestValue);

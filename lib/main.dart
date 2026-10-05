@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:xiaoan_tsl/app.dart';
 import 'package:xiaoan_tsl/core/database/database_provider.dart';
 import 'package:xiaoan_tsl/core/database/local_store.dart';
+import 'package:xiaoan_tsl/services/desktop/macos_desktop_service.dart';
+import 'package:xiaoan_tsl/services/translation/translation_settings.dart';
 
 Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -19,6 +22,17 @@ Future<void> main() async {
     final store = await LocalStore.open(
       legacyFile: File(path.join(directory.path, 'translation_history.json')),
     );
+    // macOS 启动完成后恢复全局截图快捷键配置；注册冲突不阻塞启动，可在设置页重选。
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
+      final shortcut =
+          await store.getSetting(TranslationSettingKeys.screenshotShortcut) ??
+              'Control+Option+T';
+      try {
+        await MacosDesktopChannel().updateShortcut(shortcut);
+      } catch (_) {
+        // 冲突或通道未就绪时保留原状，设置页会提示重新选择。
+      }
+    }
     // 异步初始化完成，允许渲染首帧并移除原生启动屏。
     FlutterNativeSplash.remove();
     runApp(
