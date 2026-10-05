@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | `01_prd/` | 产品目标、功能范围和验收要求 | [v1.0 PRD](01_prd/prd_v1.0.md) |
 | `01_prd/compliance/` | 与产品需求关联的合规草案，发布前仍需确认 | [隐私政策草案](01_prd/compliance/privacy_policy.md) |
-| `02_design/` | 应用架构、技术选择与交互原型 | [架构设计](02_design/architecture.md) · [HTML 原型](02_design/prototype.html) |
+| `02_design/` | 应用架构、技术选择、交互原型与大屏适配指南 | [架构设计](02_design/architecture.md) · [HTML 原型](02_design/prototype.html) · [平板端适配指南](02_design/tablet_adaptation_guide.md) |
 | `03_specs/` | 实现时采用的细化契约 | [状态机](03_specs/state_machine.md) · [数据库](03_specs/database_schema.md) · [服务接口](03_specs/service_contracts.md) · [路由](03_specs/routing_and_deeplink.md) |
 | `04_plans/` | 当前任务、验收结果与未完成事项 | [活跃执行计划](04_plans/current_plan.md) |
 | `superpowers/plans/` | 按 superpowers 流程编写的、带日期的实施计划；完成后保留原记录 | [核心框架计划](superpowers/plans/2026-09-24-core-framework.md) · [v1 剩余功能计划](superpowers/plans/2026-09-24-v1-completion.md) |

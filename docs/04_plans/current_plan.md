@@ -73,6 +73,87 @@
 
 ---
 
+## macOS 截图翻译实施进度（2026-10-02 起）
+
+**计划链接**：[macOS 截图翻译实施计划](../superpowers/plans/20261002225612_macOS截图翻译实施计划.md)（逐项勾选以此为准）。
+
+**执行约定**：用户在 dev 分支要求完成开发工作，不提交代码；每完成一步在计划文档打勾。
+
+### Task 0：核对目标、环境和当前基线（完成）
+- 工作树：存在未提交的平板文档（`docs/02_design/tablet_adaptation_guide.md`）与 `docs/README.md`、`docs/CHANGELOG.md` 改动，未纳入本次范围。
+- 环境：Flutter 3.44.9 stable / Dart ^3.12.2；macOS 26.7.1（x86_64）；Xcode 26.4；`flutter devices` 无 Android 实体设备连接。
+- 基线：`flutter analyze` 0 问题；全量 `flutter test` 101 项通过（2026-10-03 记录）。
+- 百度账号类型未与用户确认：按计划默认开放平台 AppID/密钥分支实施；智能云分支未启用（Task 2 对应复选框未勾选）。
+
+### Task 1：让翻译流程按实际服务运行（完成）
+- `TranslationService.requiresMlKitModels`；ML Kit 返回 true，在线服务 false。
+- 请求开始固定服务；模型检查/下载只属于 ML Kit；在线服务不读取模型 Provider。
+- Provider 同文件提供 `translationPlatformProvider` 可覆盖平台选择；macOS 不创建 ML Kit；未知/未交付配置回退平台默认；缺凭据返回 `BaiduConfigException` 配置错误。
+- `AppController.setTranslationEngine` 切换服务并让旧请求失效（首页规则已建立）。
+- 变更文件：`translation_service.dart`、`mlkit_translation_service.dart`、`translation_service_provider.dart`、`app_controller.dart`、`app_localizations.dart`、`translation_home_page.dart`。
+- 测试：`translation_service_provider_test.dart`、`real_translation_flow_test.dart`、`app_controller_test.dart` 及全部 `implements TranslationService` 替身更新，通过。
+
+### Task 2：接入用户实际持有的百度服务（完成，智能云分支除外）
+- 新增 `baidu_translation_service.dart`、`translation_settings.dart`；`pubspec` 声明 `crypto`、`flutter_secure_storage`（锁文件已解析）。
+- 固定签名向量 `f89f9594663708c1605f3d736d01d2d4`、UTF-8 先签名后编码、语言映射（ja/jp、ko/kor、fr/fra、es/spa）、分段 dst 顺序、业务/网络/协议错误分类、错误不含密钥与原文；不自动重试。
+- 测试：`baidu_translation_service_test.dart`、`translation_settings_test.dart` 通过；数据库设置不包含 secret。
+
+### Task 3：提供安全可理解的服务设置（完成）
+- 新增 `/translation-service`（`translation_service_page.dart`）：平台服务列表、apple 禁用、凭据掩码保存/删除、固定短句测试连接（前置说明、失败保留输入）、在线数据传输说明、macOS 截图快捷键设置项（原生注册留待 Task 5）。
+- 设置页增加“翻译服务”入口；macOS 隐藏离线语言包入口且 `/offline-models` 直接访问不读模型 Provider；历史与首页引擎标签统一本地化；配置错误在首页显示“前往配置”入口。
+- 测试：`translation_service_page_test.dart` 9 项与 `widget_test.dart` 更新后全量通过。
+
+### Task 4：macOS 截图/OCR/语言识别原生桥（实现完成，实机验收在 Task 7）
+- Dart 侧 `macos_desktop_service.dart`：通道方法 captureRegion/recognizeText/identifyLanguage/showResultWindow/cancelCapture；错误码 permissionDenied/captureFailed/ocrFailed/shortcutConflict/platformUnsupported 映射为领域异常；非 macOS 返回不支持实现并抛明确异常；Provider 按平台选择。
+- 原生侧：`ScreenCaptureCoordinator.swift`（CGPreflight/CGRequest 权限、SCShareableContent+SCScreenshotManager 全屏快照、cropPixelRect 纯函数、Vision OCR 阅读顺序排序、Natural Language 语言映射）、`MacDesktopBridge.swift`（通道 handler、SelectionOverlayView 框选覆盖层、Esc/极小区域取消、跨屏按显示器边界裁切、完成回调恰好一次）；`MainFlutterWindow.swift` 注册 bridge。
+- 工程配置：pbxproj 注册两个 Swift 文件并补 DEFINES_MODULE/PRODUCT_MODULE_NAME；最低 macOS 14（Podfile + 3 个构建配置）；Debug/Release entitlements 增加 network.client；Info.plist 版本键沿用部署目标变量无需改动；main.dart 启动路径已核实无移动端专属流程。
+- 验证：`flutter analyze` 0 问题；桌面通道 Dart 测试 11 项通过；`flutter build macos --debug` 成功；RunnerTests 原生单测 6 项通过（Retina 倍率、负坐标、Y 翻转、屏幕边缘、极小/越界选区）。
+- 未完成：Task 4 完成条件的实际 Mac 截图与 OCR 运行验收、ML Kit MissingPluginException 消除确认，留待 Task 7 实机验收；Task 5 的快捷键注册未接。
+
+**当前状态**：Task 5 进行中（菜单栏常驻、全局快捷键、单窗口）。
+
+### Task 5：菜单栏常驻、全局快捷键与单窗口（实现完成，运行场景验收在 Task 7）
+- 原生：Carbon RegisterEventHotKey 只注册用户指定组合（默认 Control+Option+T），先注册新键成功再注销旧键，冲突返回 shortcutConflict 且保留旧注册；快捷键/菜单动作经 EventChannel 仅通知 Dart；AppDelegate 最后窗口关闭不退出、关闭时隐藏窗口保留引擎、applicationWillTerminate 注销快捷键与通道；MainFlutterWindow.showResultWindow/restoreMainWindow 保存正常 frame/style 并在屏幕内计算结果窗位置。
+- Dart：`MacosDesktopService.updateShortcut` + `events` 事件流（screenshotHotkey/openSettings）；main.dart macOS 启动恢复已保存快捷键配置；设置页新增快捷键选择对话框（注册成功才保存，冲突保留原设置）；l10n 中英文键补齐。
+- 验证：`flutter analyze` 0 问题；桌面通道测试 15 项通过；RunnerTests 原生单测 9 项通过（含快捷键解析）；`flutter build macos --debug` 成功；全量 `flutter test` 116 项通过。
+- 未完成：全屏 Spaces 辅助窗口行为、后台/关窗/重复切换快捷键/注销重启场景的实机验证，归入 Task 7。
+
+### Task 6：截图结果连接翻译服务（实现完成）
+- 新增 `lib/features/screenshot/screenshot_controller.dart`：会话序号与请求开始固定服务；`ref.listen(translationEngineProvider)` 服务切换即失效回 idle；startCapture 先取消旧会话再捕获（重复触发安全）；OCR 空/超 5000 字符/权限/捕获失败/不支持分别映射 noText/tooLong/permissionDenied/captureFailed/unsupported；非英文或低置信度先进 needsConfirm，用户确认后才发请求；固定 en→zh、30 秒超时（可注入）；成功会话保存 TranslationRecord 并刷新 AppController 历史。
+- 新增 `lib/features/screenshot/screenshot_result_page.dart`：截图在上、原文/中文译文在下，长内容 ListView 滚动；done 提供复制/重新截图，failed 按失败类型提供前往配置/重试/重新截图；Esc 与关闭按钮 dismiss 释放截图内存；服务切换回 idle 自动关闭页面；浅/暗色与中英文文案齐备。
+- 挂接：`app_router.dart` 增加 `/screenshot-result`；`app.dart` 重写为 DesktopEventBridge（订阅桌面事件流：screenshotHotkey→startCapture+进入结果页、openSettings→设置页），不等待 API 完成即展示截图；`app_controller.dart` 增加 `refreshRecords()`。
+- 测试：控制器测试 13 项（捕获取消/权限/空识别/超长/非英文确认/英文直译/缺凭据计数为零/超时/旧响应丢弃/服务切换失效/历史保存失败/关闭释放/重试复用原文）+ 结果页测试 10 项（中英、明暗、长文本滚动、按钮与失败文案、确认后完成、关闭释放），全量 `flutter test` 139 项通过，`flutter analyze` 0 问题。
+- 未完成：实际 Mac 上从快捷键到译文完整闭环（Task 6 完成条件），归入 Task 7 实机验收。
+
+**当前状态**：Task 6 实现完成并登记；Task 7（首版回归与交付记录）待开始。
+
+---
+
+## 2026-10-05：macOS 已授权仍拒绝截图的排查与修复
+
+- 系统日志确认两个独立原因：14:30 的截图请求被归属到 `com.microsoft.VSCode`，返回 `authValue=0`；独立启动后 ScreenCaptureKit 仍拒绝，14:46 的 TCC 日志明确报告 `Failed to match existing code requirement`。旧授权绑定 `421bebaf…`，新应用临时签名为 `856031e3…`，设置开关开启不代表新版签名已获授权。
+- 原生捕获改为由 ScreenCaptureKit 实际结果判断授权，移除 CGPreflight/CGRequest 的提前拦截及“申请成功仍报拒绝”分支。只有 `SCStreamError.userDeclined` 映射为权限错误，其他捕获错误保留原生域和错误码用于诊断；中英文提示说明已授权时完全退出后独立启动，以及 IDE 自身权限的影响。
+- `AppInfo.xcconfig` 可选加载本机 `LocalSigning.xcconfig`，该文件由 `macos/.gitignore` 排除。本机已使用现有 Apple Development 证书配置稳定开发签名；其他开发者应填写自己的 `CODE_SIGN_IDENTITY` 与 `DEVELOPMENT_TEAM`。缺少本机配置时保持原构建设置。
+- 验证：新增权限提示回归测试先复现旧提示缺少已授权处理说明；完整 Flutter 测试 144 项通过，原生 RunnerTests 11 项通过，`flutter analyze` 无问题，`git diff --check` 通过。原生测试覆盖真实拒绝码、其他 ScreenCaptureKit 错误及其他域同码错误。
+- `flutter build macos --debug` 成功；`codesign -d -r-` 确认 designated requirement 已采用应用标识、Apple 证书与证书身份，而非每次构建变化的 cdhash。个人证书与团队只保存在本机忽略文件中。
+- 实际 Mac 捕获已执行，确认故障发生在系统捕获授权阶段，尚未进入 OCR 或翻译 API。修复版已准备好，已请求用户关闭后重新开启 `xiaoan_tsl` 录屏开关以重新关联旧授权；完成后继续验证真实截图、OCR 和译文。此处不把自动化测试作为完整实机验收。
+
+## 2026-10-05：设置主页全局截图快捷键与后台框选
+
+- 将已有快捷键入口从“翻译服务”移到设置主页，支持四个组合与关闭选项；默认 `Control+Option+T`。注册成功后保存至本机数据库，冲突保留旧配置；保存失败时尝试恢复原注册，并显示失败提示。中英文说明补充最小化/后台可用、拖拽框选、松开识别与翻译以及 Esc 取消。
+- 原生诊断实际确认无边框 `NSPanel.canBecomeKey=false`，选区视图默认 `acceptsFirstMouse=false`。新增可成为键盘焦点的选区面板，接受首次点击，设置十字光标与框选提示；显示面板前安装完成回调，取消预取中的旧请求，避免重复触发遗留窗口。
+- 截图前隐藏应用自己的进度窗口；选区完成后恢复最小化窗口并显示结果。屏幕面板使用 `NSScreen` 的 Cocoa 坐标，裁剪使用选区局部坐标，结果窗口使用全局坐标。
+- Apple SDK 头文件明确 `SCDisplay.width/height` 单位为 point，原实现误当像素。快照尺寸现按屏幕 Retina 倍率生成，与选区裁剪保持一致。
+- OCR 已存在并由真实 Vision 调用验证：自建英文 PNG 成功识别 `Hello world`。完整 Flutter 回归 145 项、原生回归 14 项通过，`flutter analyze` 无问题；最终 macOS 应用构建与开发证书签名核验通过，Dart 格式与差异检查通过。
+- 真实屏幕快照验收仍被系统拒绝，错误为 `com.apple.ScreenCaptureKit.SCStreamErrorDomain/-3801`。15:26 的 TCC 日志再次确认旧授权仍绑定 `421bebaf…`，尚未匹配当前稳定开发证书签名。因此 OCR 本身已验证，实际屏幕快照→OCR→百度译文的完整验收仍须先重新关联系统授权，不能报告为已通过。
+
+## 2026-10-05：清理失效录屏授权并恢复正式系统申请
+
+- 用户反馈应用与 VS Code 的系统开关均已开启，但仍循环进入权限错误页。15:32 的 TCC 日志确认录屏记录仍绑定旧 `421bebaf…` 临时签名，不匹配现有 Apple Development 证书。
+- 正常结束本工作区应用后，执行仅针对本应用的 `tccutil reset ScreenCapture com.example.xiaoanTsl`，系统返回 `Successfully reset`；重新启动后的捕获请求已不再报告旧签名要求不匹配。未卸载应用或清理翻译数据。
+- 重置后还确认 `replayd` 日志为 `Service kTCCServiceScreenCapture does not allow prompting; returning denied`。移除预检拦截时一并移除了正式申请，导致捕获服务无法代表应用发起首次授权。现于原生截图入口补回 `CGRequestScreenCaptureAccess()`，不以其返回值提前拒绝捕获，最终结果仍由 ScreenCaptureKit 判断。
+- 新修复版构建成功，原生回归 14 项通过，差异检查通过。已准备由当前签名重新触发系统授权；实际屏幕捕获与翻译的最终验收仍需用户完成新的系统确认。
+
 ## 质量验证红线（Hard Gates）
 
 当前工程已通过以下验证：
