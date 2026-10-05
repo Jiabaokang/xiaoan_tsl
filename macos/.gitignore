@@ -5,3 +5,6 @@
 # Xcode-related
 **/dgph
 **/xcuserdata/
+
+# 每位开发者使用自己的 macOS 开发证书。
+Runner/Configs/LocalSigning.xcconfig
