@@ -47,7 +47,10 @@ class AboutPage extends StatelessWidget {
         title: Text(l10n.aboutAppLabel),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        // 滚动留白叠加系统边衬，避免末项和横屏内容被系统区域遮挡。
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16) +
+            MediaQuery.paddingOf(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

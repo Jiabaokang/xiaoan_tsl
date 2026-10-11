@@ -59,7 +59,10 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
             widget.favoritesOnly ? l10n.favoritesTitle : l10n.recordsTitle),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+        // 滚动留白叠加系统边衬，避免末项和横屏内容被系统区域遮挡。
+        padding:
+            const EdgeInsets.fromLTRB(18, 8, 18, 24) +
+            MediaQuery.paddingOf(context),
         children: [
           TextField(
             controller: _search,
