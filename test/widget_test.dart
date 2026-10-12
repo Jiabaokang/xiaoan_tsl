@@ -252,6 +252,33 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  for (final route in ['/history', '/favorites', '/settings']) {
+    testWidgets('$route在横屏时避让两侧系统区域', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(900, 500);
+      tester.view.padding = const FakeViewPadding(
+        left: 72,
+        right: 36,
+        bottom: 24,
+      );
+      addTearDown(tester.view.reset);
+      await pumpApp(tester);
+      container.read(routerProvider).go(route);
+      await tester.pump();
+      await waitFor(
+        tester,
+        () => find.byType(CircularProgressIndicator).evaluate().isEmpty,
+      );
+      final item = route == '/settings'
+          ? find.byType(ListTile).first
+          : find.byType(TextField).first;
+      final rect = tester.getRect(item);
+      expect(rect.left, greaterThanOrEqualTo(72));
+      expect(rect.right, lessThanOrEqualTo(864));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('首页品牌图标在浅色和深色主题下使用应用图标', (tester) async {
     await pumpApp(tester);
     final icon = find.byKey(const Key('appBrandIcon'));

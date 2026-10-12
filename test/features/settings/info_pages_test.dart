@@ -31,6 +31,59 @@ void main() {
     );
   });
 
+  for (final (name, page) in <(String, Widget)>[
+    ('关于', const AboutPage()),
+    ('隐私政策', const PrivacyPolicyPage()),
+    ('开源许可', const OpenSourceLicensesPage()),
+  ]) {
+    for (final brightness in Brightness.values) {
+      for (final landscape in [false, true]) {
+        testWidgets('$name在$brightness与横屏=$landscape时避让系统区域', (tester) async {
+          final size = landscape ? const Size(900, 500) : const Size(400, 800);
+          final left = landscape ? 72.0 : 0.0;
+          final right = landscape ? 36.0 : 0.0;
+          const bottom = 48.0;
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = size;
+          tester.view.padding = FakeViewPadding(
+            top: 24,
+            left: left,
+            right: right,
+            bottom: bottom,
+          );
+          addTearDown(tester.view.reset);
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: ThemeData(brightness: brightness, useMaterial3: true),
+              locale: const Locale('zh'),
+              localizationsDelegates: _testLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: page,
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final content = find
+              .descendant(
+                of: find.byType(SingleChildScrollView),
+                matching: find.byType(Column),
+              )
+              .first;
+          final scrollable = tester.state<ScrollableState>(
+            find.byType(Scrollable).first,
+          );
+          scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+          await tester.pump();
+          final rect = tester.getRect(content);
+          expect(rect.left, greaterThanOrEqualTo(left));
+          expect(rect.right, lessThanOrEqualTo(size.width - right));
+          expect(rect.bottom, lessThanOrEqualTo(size.height - bottom));
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  }
+
   test('AppLocalizations 包含新增的关于和第三方库文案', () {
     const zh = AppLocalizationsZh();
     const en = AppLocalizationsEn();

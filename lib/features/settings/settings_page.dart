@@ -114,7 +114,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 48),
+        // 滚动留白叠加系统边衬，避免末项和横屏内容被系统区域遮挡。
+        padding:
+            const EdgeInsets.only(bottom: 48) + MediaQuery.paddingOf(context),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 4),
