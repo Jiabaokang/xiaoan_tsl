@@ -11,7 +11,7 @@ PRODUCT_NAME = xiaoan_tsl
 PRODUCT_BUNDLE_IDENTIFIER = com.jbk.xiaoantsl
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.jbk. All rights reserved.
 
 // 本机开发证书提供稳定签名，避免临时签名每次编译后使录屏授权失效。
 #include? "LocalSigning.xcconfig"
