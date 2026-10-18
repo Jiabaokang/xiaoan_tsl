@@ -2,6 +2,18 @@
 
 每次提交涉及 `docs/`、`AGENTS.md` 或根目录 `README.md` 的修改时，在顶部新增一条记录。一个提交或一批相关修改写一条；日期使用本地日期，说明修改内容、原因和相关文件。Git 历史保留逐行差异，本文件方便按时间查找文档变更。
 
+## 2026-10-12 — 截图翻译改为独立结果窗口
+
+- 更新 [实施方案](02_design/20261002225612_macOS截图翻译实施方案.md) 的窗口及快照通道契约，更新 [文档入口](README.md) 与 [活跃执行计划](04_plans/current_plan.md)。
+- 原因：结果路由占用主页，Dock 无法回到主页，系统关窗会隐藏唯一窗口。改为独立结果窗口，业务仍由主引擎处理，关闭结果恢复主页，Dock 可随时打开主页；移动端保留原流程。
+- 验证：Flutter 全量回归 165 项、原生回归 15 项通过，静态检查无问题；Release 已按安装脚本覆盖安装并从固定位置启动，签名验证通过。Android 真机未连接，完整截图及全屏、多屏场景仍待实际验收。
+
+## 2026-10-05 — 固定 macOS 应用安装位置，避免出现两个 APP
+
+- 新增 `scripts/install_macos.sh`：构建 Release 后覆盖安装到 `~/Applications/xiaoan_tsl.app` 单一位置并启动。
+- 更新 `AGENTS.md`：新增 macOS 桌面运行与打包规则，调试统一用 `flutter run -d macos`，分发验收用安装脚本，禁止直接从 `build/` 目录打开或拷贝多份 `.app`。
+- 原因：VSCode 运行（Debug）与 Agent 执行的 `flutter build macos --release`（Release）分别在 `build/macos/Build/Products/` 的 `Debug/`、`Release/` 目录各生成一个同名 `.app`，被误认为每次生成临时包名；经核实 bundle identifier 始终为 `com.example.xiaoanTsl`，且 Debug/Release 均由同一 Apple Development 证书签名，包名与签名均未随机变化。
+
 ## 2026-10-05 — 刷新失效录屏授权并补回系统正式申请
 
 - 更新 [活跃执行计划](04_plans/current_plan.md)：记录本应用录屏授权的精准重置结果，以及捕获服务无法代为提示授权的实际日志。

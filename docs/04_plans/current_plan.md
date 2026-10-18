@@ -154,6 +154,14 @@
 - 重置后还确认 `replayd` 日志为 `Service kTCCServiceScreenCapture does not allow prompting; returning denied`。移除预检拦截时一并移除了正式申请，导致捕获服务无法代表应用发起首次授权。现于原生截图入口补回 `CGRequestScreenCaptureAccess()`，不以其返回值提前拒绝捕获，最终结果仍由 ScreenCaptureKit 判断。
 - 新修复版构建成功，原生回归 14 项通过，差异检查通过。已准备由当前签名重新触发系统授权；实际屏幕捕获与翻译的最终验收仍需用户完成新的系统确认。
 
+## 2026-10-12：截图结果独立窗口与 Dock 唤起
+
+- 结果页不再覆盖 macOS 主窗口的导航或尺寸；Dock 和菜单入口打开主页，截图结果仍可独立查看。系统红色关闭、页面关闭、Esc 结束截图会话并恢复主页；关主页只隐藏，明确退出才结束应用。
+- 使用公开 API 创建按需复用的结果展示引擎，复用现有结果页。结果引擎不打开数据库或凭据、不注册快捷键、不直接调用翻译服务；通过快照同步语言和主题、通过主引擎处理操作。Android/iOS 保留原启动和翻译流程，未改动平台工程及服务逻辑。
+- 原生窗口回归 15 项通过，覆盖主窗口尺寸与最小化状态、Dock 在结果可见时唤起、两个窗口的关闭、截图前隐藏和结果窗口复用。新增结果窗口组件测试覆盖浅色、暗色、英文配置入口与操作转发，新增主页输入保留测试。
+- 最终验证：`flutter test --no-pub` 165 项通过，`flutter analyze --no-pub` 无问题，原生 RunnerTests 15 项通过，`git diff --check` 通过。`scripts/install_macos.sh` 构建 Release 成功并覆盖安装、启动 `~/Applications/xiaoan_tsl.app`；固定路径进程与 `codesign --verify --deep --strict` 签名验证通过。未提交或推送代码。
+- 当前没有连接 Android 实体设备。全屏 Spaces、多显示器及真实截图到译文的完整交互验收尚未执行，不以窗口测试代替。
+
 ## 质量验证红线（Hard Gates）
 
 当前工程已通过以下验证：

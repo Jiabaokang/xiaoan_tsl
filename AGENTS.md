@@ -21,6 +21,13 @@
   - 必须采用覆盖安装模式（例如标准的 `flutter run` 或 `adb install -r`）。
   - 绝对严禁执行卸载操作（如 `adb uninstall`、带有 `--uninstall-first` 参数的命令等）。卸载重装会触发系统级安全二次授权弹窗，导致流程中断并强依赖人工盯屏确认。覆盖安装可保持已授权状态，保证调试流畅。
 
+### macOS 桌面运行与打包规则（严格执行）
+
+- 日常调试统一使用 `flutter run -d macos`（Debug 模式），不要用 Release 构建做日常运行。
+- 需要验收或可分发的应用时，运行 `scripts/install_macos.sh`：构建 Release 并覆盖安装到 `~/Applications/xiaoan_tsl.app` 这一固定位置，只从该位置启动。
+- 严禁直接从 `build/macos/Build/Products/` 下 `open` 或向其他位置拷贝 `.app`。`Debug/` 与 `Release/` 目录各有一个同名 `.app` 是 Xcode 按构建模式分目录输出的正常现象，并非重复安装或临时包名；包名（bundle identifier）固定在 `macos/Runner/Configs/AppInfo.xcconfig`，签名由该目录下 `LocalSigning.xcconfig` 指定，均不得改为随机值。
+- `build/` 下的产物可随时用 `flutter clean` 清理，不影响源码。
+
 ## 代码风格与命名
 
 Dart 代码使用默认的两个空格缩进，提交前运行 `dart format lib test`。文件名使用 `snake_case.dart`，类和组件使用 `UpperCamelCase`，变量与方法使用 `lowerCamelCase`。尽量拆分小组件，避免在 UI 的 `build` 方法中堆放业务逻辑。修改依赖时同步更新 `pubspec.lock`。
