@@ -8,6 +8,8 @@ import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 import 'package:xiaoan_tsl/services/language/language_detection_provider.dart';
 import 'package:xiaoan_tsl/services/translation/baidu_translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
+import 'package:xiaoan_tsl/services/translation/model_download_controller.dart';
+import 'package:xiaoan_tsl/services/translation/model_download_status.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
 
 // 翻译请求在页面上呈现的阶段。
@@ -55,6 +57,9 @@ class AppState {
     this.themeMode = ThemeMode.system,
     this.localeMode = 'system',
     this.loaded = false,
+    this.modelDownloadCodes = const [],
+    this.modelDownloadIndex = 0,
+    this.modelDownloadError,
   });
 
   final String input;
@@ -70,6 +75,15 @@ class AppState {
   final ThemeMode themeMode;
   final String localeMode;
   final bool loaded;
+  // 本次需要下载的模型及当前位置，供首页显示语言和多包步骤。
+  final List<String> modelDownloadCodes;
+  final int modelDownloadIndex;
+  final ModelDownloadException? modelDownloadError;
+
+  String? get downloadingModelCode =>
+      modelDownloadIndex < modelDownloadCodes.length
+          ? modelDownloadCodes[modelDownloadIndex]
+          : null;
 
   // 根据当前 localeMode 获取 Flutter 实体 Locale（null 代表跟随系统）。
   Locale? get locale => switch (localeMode) {
@@ -95,7 +109,8 @@ class AppState {
                     ? l10n.errorSwapLanguage
                     : l10n.errorUnsupportedLang),
             TranslationFailure.modelCheck => l10n.errorModelCheck,
-            TranslationFailure.modelDownload => l10n.errorModelDownload,
+            TranslationFailure.modelDownload => l10n.modelDownloadFailure(
+                modelDownloadError?.failure.name ?? 'unknown'),
             TranslationFailure.translation => l10n.errorTranslation,
             TranslationFailure.config => l10n.errorConfigMissing,
             TranslationFailure.storage => message == '无法将结果写入历史'
@@ -121,6 +136,9 @@ class AppState {
     ThemeMode? themeMode,
     String? localeMode,
     bool? loaded,
+    List<String>? modelDownloadCodes,
+    int? modelDownloadIndex,
+    Object? modelDownloadError = _unchanged,
   }) =>
       AppState(
         input: input ?? this.input,
@@ -141,6 +159,11 @@ class AppState {
         themeMode: themeMode ?? this.themeMode,
         localeMode: localeMode ?? this.localeMode,
         loaded: loaded ?? this.loaded,
+        modelDownloadCodes: modelDownloadCodes ?? this.modelDownloadCodes,
+        modelDownloadIndex: modelDownloadIndex ?? this.modelDownloadIndex,
+        modelDownloadError: identical(modelDownloadError, _unchanged)
+            ? this.modelDownloadError
+            : modelDownloadError as ModelDownloadException?,
       );
 }
 
@@ -300,7 +323,8 @@ class AppController extends Notifier<AppState> {
     return true;
   }
 
-  Future<void> translate({bool downloadMissing = false}) async {
+  Future<void> translate(
+      {bool downloadMissing = false, bool wifiOnly = false}) async {
     final text = state.input.trim();
     if (text.isEmpty || state.phase.isBusy) return;
     if (text.length > 5000) {
@@ -321,6 +345,9 @@ class AppController extends Notifier<AppState> {
       failure: TranslationFailure.none,
       message: '正在识别输入语言',
       result: null,
+      modelDownloadCodes: const [],
+      modelDownloadIndex: 0,
+      modelDownloadError: null,
     );
     try {
       final detected = await ref.read(languageDetectionProvider).identify(text);
@@ -363,6 +390,7 @@ class AppController extends Notifier<AppState> {
       // 模型检查与下载只属于 ML Kit 服务；在线服务不读取模型 Provider。
       if (service.requiresMlKitModels) {
         final models = ref.read(translationModelProvider);
+        final missing = <String>[];
         for (final code in {source, target}) {
           state = state.copyWith(
             phase: TranslationPhase.checkingModel,
@@ -370,21 +398,27 @@ class AppController extends Notifier<AppState> {
           );
           final downloaded = await models.isDownloaded(code);
           if (!ref.mounted || request != _request) return;
-          if (!downloaded) {
-            if (!downloadMissing) {
-              state = state.copyWith(
-                phase: TranslationPhase.modelDownloadRequired,
-                message: '需要下载语言模型',
+          if (!downloaded) missing.add(code);
+        }
+        state = state.copyWith(modelDownloadCodes: missing);
+        if (missing.isNotEmpty && !downloadMissing) {
+          state = state.copyWith(
+            phase: TranslationPhase.modelDownloadRequired,
+            message: '需要下载语言模型',
+          );
+          return;
+        }
+        for (var index = 0; index < missing.length; index++) {
+          state = state.copyWith(
+            phase: TranslationPhase.downloadingModel,
+            modelDownloadIndex: index,
+            message: '正在准备离线翻译模型',
+          );
+          await ref.read(modelDownloadsProvider.notifier).download(
+                missing[index],
+                wifiOnly: wifiOnly,
               );
-              return;
-            }
-            state = state.copyWith(
-              phase: TranslationPhase.downloadingModel,
-              message: '正在准备离线翻译模型',
-            );
-            await models.download(code, wifiOnly: false);
-            if (!ref.mounted || request != _request) return;
-          }
+          if (!ref.mounted || request != _request) return;
         }
       }
       state = state.copyWith(
@@ -456,6 +490,7 @@ class AppController extends Notifier<AppState> {
           phase: TranslationPhase.error,
           failure: failure,
           message: message,
+          modelDownloadError: error is ModelDownloadException ? error : null,
         );
       }
     }

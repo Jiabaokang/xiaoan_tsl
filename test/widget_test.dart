@@ -643,7 +643,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('重试翻译'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('继续下载'));
+    await tester.tap(find.text('允许移动网络下载'));
     await waitFor(
       tester,
       () =>
@@ -688,7 +688,7 @@ void main() {
     expect(models.wifiRequirements, isEmpty);
     await tester.tap(find.widgetWithText(FilledButton, '需要下载语言模型'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('继续下载'));
+    await tester.tap(find.text('允许移动网络下载'));
     await waitFor(
       tester,
       () =>
@@ -729,6 +729,9 @@ void main() {
     expect(find.byKey(const Key('delete_en')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('download_zh')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.text('仅 Wi-Fi 下载'));
     await waitFor(
       tester,
       () => find.byKey(const Key('delete_zh')).evaluate().isNotEmpty,
@@ -765,18 +768,24 @@ void main() {
       () => find.byKey(const Key('download_zh')).evaluate().isNotEmpty,
     );
     await tester.tap(find.byKey(const Key('download_zh')));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.text('仅 Wi-Fi 下载'));
     await waitFor(
       tester,
-      () => find.textContaining('下载语言模型失败').evaluate().isNotEmpty,
+      () => find.textContaining('语言包下载失败').evaluate().isNotEmpty,
     );
-    expect(find.byKey(const Key('download_zh')), findsOneWidget);
+    expect(find.text('重试下载'), findsOneWidget);
     models.fail = false;
-    await tester.tap(find.byKey(const Key('download_zh')));
+    await tester.tap(find.text('重试下载'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await tester.tap(find.text('仅 Wi-Fi 下载'));
     await waitFor(
       tester,
       () => find.byKey(const Key('delete_zh')).evaluate().isNotEmpty,
     );
-    expect(find.textContaining('下载语言模型失败'), findsNothing);
+    expect(find.textContaining('语言包下载失败'), findsNothing);
   });
 
   testWidgets('原文和译文使用各自语言朗读并可停止', (tester) async {

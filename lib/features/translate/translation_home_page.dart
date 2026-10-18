@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import 'package:xiaoan_tsl/core/widgets/app_panel.dart';
 import 'package:xiaoan_tsl/features/translate/app_controller.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
+import 'package:xiaoan_tsl/features/language/model_download_progress.dart';
+import 'package:xiaoan_tsl/services/translation/model_download_controller.dart';
 import 'package:xiaoan_tsl/services/sharing/sharing_service.dart';
 import 'package:xiaoan_tsl/services/speech/speech_service_provider.dart';
 import 'package:xiaoan_tsl/services/speech/tts_service.dart';
@@ -127,27 +129,11 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
 
   // 缺少模型时由用户确认本次下载，移动网络也可使用。
   Future<void> _confirmModelDownload() async {
-    final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.modelDownloadRequired),
-        content: Text(l10n.modelDownloadDialogContent),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(l10n.continueDownload),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true && mounted) {
+    final wifiOnly = await confirmModelDownload(context);
+    if (wifiOnly != null && mounted) {
       await ref.read(appControllerProvider.notifier).translate(
             downloadMissing: true,
+            wifiOnly: wifiOnly,
           );
     }
   }
@@ -371,6 +357,26 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                 minimumSize: const Size.fromHeight(51),
               ),
             ),
+            if ((state.phase == TranslationPhase.downloadingModel ||
+                    state.failure == TranslationFailure.modelDownload) &&
+                state.downloadingModelCode != null)
+              Consumer(builder: (context, ref, child) {
+                final download = ref
+                    .watch(modelDownloadsProvider)[state.downloadingModelCode];
+                if (download == null) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          '${l10n.languageName(download.code)} · ${l10n.modelDownloadStep(state.modelDownloadIndex + 1, state.modelDownloadCodes.length)}'),
+                      const SizedBox(height: 8),
+                      ModelDownloadProgress(status: download),
+                    ],
+                  ),
+                );
+              }),
             if (state.phase == TranslationPhase.error &&
                 state.failure != TranslationFailure.unsupportedLanguage &&
                 state.failure != TranslationFailure.detection &&

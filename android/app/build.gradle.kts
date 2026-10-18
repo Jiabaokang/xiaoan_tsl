@@ -58,6 +58,14 @@ android {
     }
 }
 
+dependencies {
+    // 与 google_mlkit_translation 0.15.1 共用相同 SDK 和模型存储。
+    implementation("com.google.mlkit:translate:17.0.3")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.15.1")
+    testImplementation("org.mockito:mockito-core:5.18.0")
+}
+
 base {
     var fileName = "TS-v${flutter.versionName}.${flutter.versionCode}"
     archivesName.set(fileName)

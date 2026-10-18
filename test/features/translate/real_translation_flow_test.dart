@@ -151,7 +151,7 @@ void main() {
     await controller.translate(downloadMissing: true);
 
     expect(detector.calls, 1);
-    expect(models.checked, ['en', 'zh']);
+    expect(models.checked, ['en', 'zh', 'en']);
     expect(models.downloads, ['en']);
     expect(
       container.read(appControllerProvider).result?.translatedText,

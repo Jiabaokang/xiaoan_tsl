@@ -197,6 +197,24 @@ abstract class AppLocalizations {
   String get downloadModelFailed;
   String get offlineModelsUnsupported;
 
+  // 下载提醒、真实状态与错误恢复。
+  String modelDownloadTitle(String language);
+  String get modelDownloadNotice;
+  String get wifiDownloadAction;
+  String get modelPreparing;
+  String get bundledModel;
+  String get modelWaitingWifi;
+  String get modelWaitingNetwork;
+  String get modelDownloading;
+  String get modelDownloadComplete;
+  String get modelDownloadSlow;
+  String get retryDownload;
+  String get viewDownloadDetails;
+  String get copyDownloadDetails;
+  String get downloadDetailsCopied;
+  String modelDownloadFailure(String reason);
+  String modelDownloadStep(int current, int total);
+
   // 翻译服务设置页
   String get translationServiceTitle;
   String get engineMlkit;
@@ -612,6 +630,46 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteModelFailed => '删除语言模型失败，请重试';
   @override
   String get downloadModelFailed => '下载语言模型失败，请检查网络后重试';
+  @override
+  String modelDownloadTitle(String language) => '下载$language离线语言包？';
+  @override
+  String get modelDownloadNotice => '下载后可离线翻译。建议使用 Wi-Fi；允许移动网络下载可能产生流量费用。';
+  @override
+  String get wifiDownloadAction => '仅 Wi-Fi 下载';
+  @override
+  String get modelPreparing => '正在准备下载…';
+  @override
+  String get bundledModel => '内置语言包，无需下载';
+  @override
+  String get modelWaitingWifi => '等待 Wi-Fi 连接';
+  @override
+  String get modelWaitingNetwork => '等待可用网络连接';
+  @override
+  String get modelDownloading => '正在下载语言包…';
+  @override
+  String get modelDownloadComplete => '下载完成，可离线使用';
+  @override
+  String get modelDownloadSlow => '下载耗时较长，可检查网络或稍后返回查看。当前任务仍在进行中。';
+  @override
+  String get retryDownload => '重试下载';
+  @override
+  String get viewDownloadDetails => '查看错误详情';
+  @override
+  String get copyDownloadDetails => '复制错误详情';
+  @override
+  String get downloadDetailsCopied => '错误详情已复制';
+  @override
+  String modelDownloadFailure(String reason) => switch (reason) {
+        'network' => '下载连接失败，请检查网络或切换网络后重试',
+        'storage' => '设备存储空间不足，请释放空间后重试',
+        'integrity' => '语言包校验失败，请重试下载',
+        'unavailable' => '语言包暂时不可用，请稍后重试',
+        _ => '语言包下载失败，暂时无法确定原因，请稍后重试',
+      };
+  @override
+  String modelDownloadStep(int current, int total) =>
+      '正在下载第 $current / $total 个语言包';
+
   @override
   String get offlineModelsUnsupported => '当前平台不支持离线模型管理';
 
@@ -1130,6 +1188,52 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get downloadModelFailed =>
       'Failed to download language model, please check network and retry';
+  @override
+  String modelDownloadTitle(String language) =>
+      'Download the $language offline language pack?';
+  @override
+  String get modelDownloadNotice =>
+      'Translate offline after downloading. Wi-Fi is recommended; allowing mobile data may incur charges.';
+  @override
+  String get wifiDownloadAction => 'Download on Wi-Fi only';
+  @override
+  String get modelPreparing => 'Preparing download…';
+  @override
+  String get bundledModel => 'Built-in language pack';
+  @override
+  String get modelWaitingWifi => 'Waiting for Wi-Fi';
+  @override
+  String get modelWaitingNetwork => 'Waiting for a usable network';
+  @override
+  String get modelDownloading => 'Downloading language pack…';
+  @override
+  String get modelDownloadComplete => 'Download complete. Available offline.';
+  @override
+  String get modelDownloadSlow =>
+      'This download is taking longer than usual. Check your network or return later. The task is still active.';
+  @override
+  String get retryDownload => 'Retry download';
+  @override
+  String get viewDownloadDetails => 'View error details';
+  @override
+  String get copyDownloadDetails => 'Copy error details';
+  @override
+  String get downloadDetailsCopied => 'Error details copied';
+  @override
+  String modelDownloadFailure(String reason) => switch (reason) {
+        'network' =>
+          'Connection failed. Check or switch your network, then retry.',
+        'storage' => 'Not enough device storage. Free up space, then retry.',
+        'integrity' => 'Language pack verification failed. Retry the download.',
+        'unavailable' =>
+          'The language pack is temporarily unavailable. Try again later.',
+        _ =>
+          'Language pack download failed for an unknown reason. Try again later.',
+      };
+  @override
+  String modelDownloadStep(int current, int total) =>
+      'Downloading language pack $current of $total';
+
   @override
   String get offlineModelsUnsupported =>
       'Offline model management is not supported on this platform';

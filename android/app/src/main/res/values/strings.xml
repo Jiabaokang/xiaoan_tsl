@@ -1,0 +1,14 @@
+<resources>
+    <string name="model_download_channel_name">Offline language downloads</string>
+    <string name="model_download_channel_description">Shows the status of offline language model downloads.</string>
+    <string name="model_download_title">Xiaoan Translator · %1$s offline language pack</string>
+    <string name="model_download_waiting_wifi">Waiting for Wi-Fi</string>
+    <string name="model_download_waiting_network">Waiting for a network connection</string>
+    <string name="model_download_downloading">Downloading…</string>
+    <string name="model_download_completed">Download complete and ready to use offline</string>
+    <string name="model_download_failed_network">Network connection failed. Check your connection and retry.</string>
+    <string name="model_download_failed_storage">Not enough storage space. Free up space and retry.</string>
+    <string name="model_download_failed_integrity">The downloaded file could not be verified. Please retry.</string>
+    <string name="model_download_failed_unavailable">This language model is temporarily unavailable. Please retry later.</string>
+    <string name="model_download_failed_unknown">Download failed. Check your connection and available storage, then retry.</string>
+</resources>
