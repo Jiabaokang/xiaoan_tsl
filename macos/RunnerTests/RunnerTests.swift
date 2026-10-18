@@ -226,3 +226,104 @@ class RunnerTests: XCTestCase {
     XCTAssertNil(MacDesktopBridge.parseShortcut("Control+Option+Delete"))
   }
 }
+
+// 使用真实文件锁验证跨路径启动交接，不加载 Flutter 或启动应用。
+final class MacAppLaunchTests: XCTestCase {
+  // 每项测试使用独立锁目录，避免触碰真实应用的锁。
+  func lockURL() throws -> URL {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    addTeardownBlock { try FileManager.default.removeItem(at: directory) }
+    return directory.appendingPathComponent("instance.lock")
+  }
+
+  // 已运行的 Debug 必须被激活，新的 Release 不能夺取其锁。
+  func testReleaseActivatesDebug() throws {
+    let url = try lockURL()
+    let existing = try MacAppLaunchLease.acquire(at: url, isDebug: true, peerAction: { _, _ in false })
+    var actions: [MacAppLaunchLease.Action] = []
+    let duplicate = try MacAppLaunchLease.acquire(at: url, isDebug: false, timeout: 0.1) { owner, action in
+      XCTAssertTrue(owner.isDebug)
+      actions.append(action)
+      return true
+    }
+    XCTAssertNil(duplicate)
+    XCTAssertEqual(actions, [.activate])
+    withExtendedLifetime(existing) {}
+  }
+
+  // Debug 请求 Release 退出后，必须等旧锁真正释放才允许继续。
+  func testDebugWaitsForReleaseLock() throws {
+    let url = try lockURL()
+    var existing = try MacAppLaunchLease.acquire(at: url, isDebug: false, peerAction: { _, _ in false })
+    XCTAssertNotNil(existing)
+    var actions: [MacAppLaunchLease.Action] = []
+    let debug = try MacAppLaunchLease.acquire(at: url, isDebug: true, timeout: 0.2) { owner, action in
+      XCTAssertFalse(owner.isDebug)
+      actions.append(action)
+      existing = nil
+      return true
+    }
+    XCTAssertNotNil(debug)
+    XCTAssertEqual(actions, [.yieldToDebug])
+  }
+
+  // 旧 Release 拒绝退出时，Debug 必须超时报错，不能并行创建引擎。
+  func testRefusedTakeoverTimesOut() throws {
+    let url = try lockURL()
+    let existing = try MacAppLaunchLease.acquire(at: url, isDebug: false, peerAction: { _, _ in false })
+    XCTAssertThrowsError(try MacAppLaunchLease.acquire(at: url, isDebug: true, timeout: 0.02) { _, action in
+      XCTAssertEqual(action, .yieldToDebug)
+      return true
+    })
+    withExtendedLifetime(existing) {}
+  }
+
+  // 同类重复启动一律激活原实例；不因不同构建路径重复启动。
+  func testSameModeActivatesExisting() throws {
+    for isDebug in [false, true] {
+      let url = try lockURL()
+      let existing = try MacAppLaunchLease.acquire(at: url, isDebug: isDebug, peerAction: { _, _ in false })
+      let duplicate = try MacAppLaunchLease.acquire(at: url, isDebug: isDebug, timeout: 0.1) { _, action in
+        XCTAssertEqual(action, .activate)
+        return true
+      }
+      XCTAssertNil(duplicate)
+      withExtendedLifetime(existing) {}
+    }
+  }
+
+  // 异常退出遗留的元数据不代表运行实例；释放内核锁后下一次应能启动。
+  func testStaleMetadataDoesNotBlockStartup() throws {
+    let url = try lockURL()
+    var existing = try MacAppLaunchLease.acquire(at: url, isDebug: false, peerAction: { _, _ in false })
+    XCTAssertNotNil(existing)
+    existing = nil
+    XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+    let next = try MacAppLaunchLease.acquire(at: url, isDebug: true) { _, _ in
+      XCTFail("未持锁的旧元数据不能触发激活或退出")
+      return true
+    }
+    XCTAssertNotNil(next)
+  }
+
+  // 持锁实例尚未就绪或身份校验不通过时，不能绕过锁启动第二个引擎。
+  func testUnavailablePeerDoesNotBypassLock() throws {
+    let url = try lockURL()
+    let existing = try MacAppLaunchLease.acquire(at: url, isDebug: true, peerAction: { _, _ in false })
+    XCTAssertThrowsError(try MacAppLaunchLease.acquire(at: url, isDebug: false, timeout: 0.02) { _, _ in false })
+    withExtendedLifetime(existing) {}
+  }
+
+  // 持锁期间元数据不完整时等待重试，不能猜测对端模式或释放它的锁。
+  func testIncompleteMetadataDoesNotTriggerPeerAction() throws {
+    let url = try lockURL()
+    let existing = try MacAppLaunchLease.acquire(at: url, isDebug: false, peerAction: { _, _ in false })
+    try Data("{".utf8).write(to: url)
+    XCTAssertThrowsError(try MacAppLaunchLease.acquire(at: url, isDebug: true, timeout: 0.02) { _, _ in
+      XCTFail("不完整的身份记录不能触发跨进程动作")
+      return true
+    })
+    withExtendedLifetime(existing) {}
+  }
+}
