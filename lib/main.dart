@@ -8,6 +8,8 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:xiaoan_tsl/app.dart';
+import 'package:xiaoan_tsl/features/screenshot/screenshot_window_app.dart';
+import 'package:xiaoan_tsl/features/screenshot/screenshot_controller.dart';
 import 'package:xiaoan_tsl/core/database/database_provider.dart';
 import 'package:xiaoan_tsl/core/database/local_store.dart';
 import 'package:xiaoan_tsl/services/desktop/macos_desktop_service.dart';
@@ -58,4 +60,16 @@ Future<void> main() async {
       ),
     );
   }
+}
+
+// 独立结果引擎只启动展示与操作转发，不打开数据库或注册全局快捷键。
+@pragma('vm:entry-point')
+void screenshotWindowMain() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(ProviderScope(
+    overrides: [
+      screenshotControllerProvider.overrideWith(ScreenshotWindowController.new)
+    ],
+    child: const ScreenshotWindowApp(),
+  ));
 }

@@ -185,6 +185,9 @@ final class MacDesktopBridge: NSObject {
     case methodCancel:
       cancelCapture()
       result(nil)
+    case "updateResult":
+      mainWindow?.updateResult(arguments)
+      result(nil)
     case methodUpdateShortcut:
       let shortcut = arguments["shortcut"] as? String ?? ""
       do {
@@ -315,7 +318,27 @@ final class MacDesktopBridge: NSObject {
   }
 
   func triggerOpenSettings() {
+    mainWindow?.restoreMainWindow()
     emitEvent("openSettings")
+  }
+
+  // 系统红色关闭按钮与 Flutter 关闭按钮共用截图会话清理逻辑。
+  func triggerDismissScreenshot() {
+    emitEvent("dismissScreenshot")
+  }
+
+  // 展示引擎的按钮仅转发事件，业务始终在主引擎中执行。
+  func triggerResultAction(_ action: String) {
+    switch action {
+    case "dismiss": triggerDismissScreenshot()
+    case "reshoot": triggerScreenshotShortcut()
+    case "confirm": emitEvent("confirmScreenshot")
+    case "retry": emitEvent("retryScreenshot")
+    case "configure":
+      mainWindow?.restoreMainWindow()
+      emitEvent("openTranslationSettings")
+    default: break
+    }
   }
 
   private func emitEvent(_ event: String) {
@@ -335,7 +358,7 @@ final class MacDesktopBridge: NSObject {
     // 返回值不用于提前拒绝截图，最终状态仍由 ScreenCaptureKit 的实际捕获结果判断。
     _ = CGRequestScreenCaptureAccess()
     // 框选前隐藏自己的进度页，快照应包含用户正在阅读的屏幕内容。
-    mainWindow?.orderOut(nil)
+    mainWindow?.hideWindowsForCapture()
     do {
       let (payload, _) = try await selectAndCrop()
       if let payload {

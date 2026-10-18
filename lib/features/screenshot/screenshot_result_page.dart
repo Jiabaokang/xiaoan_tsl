@@ -9,13 +9,18 @@ import 'screenshot_controller.dart';
 
 // 截图翻译结果页：截图在上、中文译文在下；Esc 与关闭释放截图内存。
 class ScreenshotResultPage extends ConsumerStatefulWidget {
-  const ScreenshotResultPage({super.key});
+  const ScreenshotResultPage({super.key, this.desktopWindow = false, this.onConfigure});
+
+  // 独立桌面窗口由应用事件桥关闭，不操作主窗口的导航栈。
+  final bool desktopWindow;
+  final VoidCallback? onConfigure;
 
   @override
   ConsumerState<ScreenshotResultPage> createState() =>
       _ScreenshotResultPageState();
 }
 
+// 渲染会话状态并处理复制、重试与关闭；桌面模式保留主页的导航状态。
 class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
   @override
   Widget build(BuildContext context) {
@@ -23,7 +28,7 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
     final l10n = context.l10n;
     // 服务切换或外部关闭把会话置回 idle 时关闭本页。
     ref.listen(screenshotControllerProvider, (previous, next) {
-      if (next.stage == ScreenshotStage.idle &&
+      if (!widget.desktopWindow && next.stage == ScreenshotStage.idle &&
           previous?.stage != ScreenshotStage.idle) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && Navigator.of(context).canPop()) {
@@ -44,7 +49,7 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
             tooltip: l10n.screenshotClose,
             onPressed: () {
               ref.read(screenshotControllerProvider.notifier).dismiss();
-              if (mounted && Navigator.of(context).canPop()) {
+              if (!widget.desktopWindow && mounted && Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
             },
@@ -57,7 +62,7 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
           if (event is KeyDownEvent &&
               event.logicalKey == LogicalKeyboardKey.escape) {
             ref.read(screenshotControllerProvider.notifier).dismiss();
-            if (mounted && Navigator.of(context).canPop()) {
+            if (!widget.desktopWindow && mounted && Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
             }
             return KeyEventResult.handled;
@@ -165,7 +170,13 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
                 if (state.failure == ScreenshotFailure.missingCredentials)
                   FilledButton.icon(
                     key: const Key('screenshotGoConfigButton'),
-                    onPressed: () => context.push('/translation-service'),
+                    onPressed: () {
+                      if (widget.desktopWindow) {
+                        widget.onConfigure?.call();
+                      } else {
+                        context.push('/translation-service');
+                      }
+                    },
                     icon: const Icon(Icons.settings),
                     label: Text(l10n.screenshotGoConfig),
                   )

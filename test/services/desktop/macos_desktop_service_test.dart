@@ -194,18 +194,21 @@ void main() {
     );
   });
 
-  test('事件流映射 screenshotHotkey 与 openSettings', () async {
+  test('系统关闭结果窗口的事件不能被误当成新的截图', () async {
     final service = MacosDesktopChannel();
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    final eventChannel =
-        EventChannel('xiaoan_tsl/macos_desktop_events');
+    final eventChannel = EventChannel('xiaoan_tsl/macos_desktop_events');
     messenger.setMockStreamHandler(
       eventChannel,
       MockStreamHandler.inline(
         onListen: (arguments, events) {
           events.success('screenshotHotkey');
           events.success('openSettings');
+          events.success('dismissScreenshot');
+          events.success('confirmScreenshot');
+          events.success('retryScreenshot');
+          events.success('openTranslationSettings');
         },
       ),
     );
@@ -213,9 +216,13 @@ void main() {
     final subscription = service.events.listen(received.add);
     await Future<void>.delayed(Duration.zero);
     await subscription.cancel();
-    expect(received, [
-      MacosDesktopEvent.screenshotHotkey,
-      MacosDesktopEvent.openSettings,
+    expect(received.map((event) => event.name), [
+      'screenshotHotkey',
+      'openSettings',
+      'dismissScreenshot',
+      'confirmScreenshot',
+      'retryScreenshot',
+      'openTranslationSettings',
     ]);
   });
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,6 +22,7 @@ class DesktopEventBridge extends ConsumerStatefulWidget {
   ConsumerState<DesktopEventBridge> createState() => _DesktopEventBridgeState();
 }
 
+// 订阅原生事件，并把桌面结果窗口的关闭同步为截图会话结束。
 class _DesktopEventBridgeState extends ConsumerState<DesktopEventBridge> {
   StreamSubscription<MacosDesktopEvent>? _subscription;
 
@@ -42,14 +44,52 @@ class _DesktopEventBridgeState extends ConsumerState<DesktopEventBridge> {
     switch (event) {
       case MacosDesktopEvent.screenshotHotkey:
         ref.read(screenshotControllerProvider.notifier).startCapture();
-        ref.read(routerProvider).push('/screenshot-result');
+        if (kIsWeb || defaultTargetPlatform != TargetPlatform.macOS) {
+          ref.read(routerProvider).push('/screenshot-result');
+        }
       case MacosDesktopEvent.openSettings:
         ref.read(routerProvider).push('/settings');
+      case MacosDesktopEvent.dismissScreenshot:
+        ref.read(screenshotControllerProvider.notifier).dismiss();
+      case MacosDesktopEvent.confirmScreenshot:
+        ref.read(screenshotControllerProvider.notifier).confirmAndTranslate();
+      case MacosDesktopEvent.retryScreenshot:
+        ref.read(screenshotControllerProvider.notifier).retry();
+      case MacosDesktopEvent.openTranslationSettings:
+        ref.read(routerProvider).push('/translation-service');
     }
   }
 
+  // 结果引擎只接收展示快照，翻译、凭据和数据库始终由主引擎负责。
+  void _publishResult(ScreenshotState state) {
+    final app = ref.read(appControllerProvider);
+    unawaited(ref.read(macosDesktopServiceProvider).updateResult({
+      'stage': state.stage.name,
+      'failure': state.failure.name,
+      'png': state.pngBytes,
+      'recognizedText': state.recognizedText,
+      'translatedText': state.translatedText,
+      'confirmRequired': state.confirmRequired,
+      'historySaveFailed': state.historySaveFailed,
+      'themeMode': app.themeMode.name,
+      'locale': app.locale?.languageCode,
+    }));
+  }
+
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
+      ref.listen(
+          screenshotControllerProvider, (_, next) => _publishResult(next));
+      ref.listen(appControllerProvider, (previous, next) {
+        if (previous?.themeMode != next.themeMode ||
+            previous?.locale != next.locale) {
+          _publishResult(ref.read(screenshotControllerProvider));
+        }
+      });
+    }
+    return widget.child;
+  }
 }
 
 // 应用主题、多语言及声明式路由入口。

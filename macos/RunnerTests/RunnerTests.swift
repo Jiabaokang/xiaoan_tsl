@@ -39,24 +39,61 @@ class RunnerTests: XCTestCase {
     XCTAssertTrue(text.lowercased().contains("hello world"), text)
   }
 
-  // 最小化的主窗口收到截图选区后必须恢复，用户才能看到识别进度和译文。
+  // 截图结果应使用独立窗口，不能改变主窗口尺寸或最小化状态。
   @MainActor
-  func testMinimizedWindowShowsScreenshotResult() async {
-    let window = MainFlutterWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 600),
-      styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-    window.isReleasedWhenClosed = false
-    defer { window.close() }
+  func testMinimizedWindowShowsScreenshotResult() async throws {
+    let window = try XCTUnwrap(NSApp.windows.compactMap { $0 as? MainFlutterWindow }.first)
+    let originalFrame = window.frame
+    defer { window.restoreMainWindow() }
     window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
     let minimized = expectation(forNotification: NSWindow.didMiniaturizeNotification, object: window)
     window.miniaturize(nil)
     await fulfillment(of: [minimized], timeout: 5)
     XCTAssertTrue(window.isMiniaturized)
-    let restored = expectation(forNotification: NSWindow.didDeminiaturizeNotification, object: window)
     window.showResultWindow(displayId: CGMainDisplayID(), selection: NSRect(x: 50, y: 50, width: 200, height: 100))
-    await fulfillment(of: [restored], timeout: 5)
-    XCTAssertFalse(window.isMiniaturized)
+    XCTAssertTrue(window.isMiniaturized)
+    XCTAssertEqual(window.frame, originalFrame)
+    let result = try XCTUnwrap(NSApp.windows.first {
+      $0 !== window && $0.contentViewController is FlutterViewController
+    })
+    defer { result.orderOut(nil) }
+    XCTAssertTrue(result.isVisible)
+    XCTAssertFalse((result.contentViewController as? FlutterViewController)?.engine ===
+      (window.contentViewController as? FlutterViewController)?.engine)
+  }
+
+  // Dock 在译文可见时仍打开主页；两种关窗都不销毁主引擎，下一次截图复用结果窗。
+  @MainActor
+  func testDockAndResultCloseKeepMainWindowAvailable() throws {
+    let window = try XCTUnwrap(NSApp.windows.compactMap { $0 as? MainFlutterWindow }.first)
+    let delegate = try XCTUnwrap(NSApp.delegate as? AppDelegate)
+    let originalFrame = window.frame
+    window.showResultWindow(displayId: CGMainDisplayID(), selection: .zero)
+    let result = try XCTUnwrap(window.resultWindow)
+    defer { window.closeResultWindow() }
+    window.orderOut(nil)
+    XCTAssertFalse(delegate.applicationShouldHandleReopen(NSApp, hasVisibleWindows: true))
     XCTAssertTrue(window.isVisible)
+    XCTAssertTrue(result.isVisible)
+    XCTAssertEqual(window.frame, originalFrame)
+
+    // 框选隐藏两个窗口；关闭结果只隐藏结果窗并恢复主页。
+    window.hideWindowsForCapture()
+    XCTAssertFalse(window.isVisible)
+    XCTAssertFalse(result.isVisible)
+    window.showResultWindow(displayId: CGMainDisplayID(), selection: .zero)
+    result.performClose(nil)
+    XCTAssertFalse(result.isVisible)
+    XCTAssertTrue(window.isVisible)
+    XCTAssertFalse(delegate.applicationShouldTerminateAfterLastWindowClosed(NSApp))
+    window.showResultWindow(displayId: CGMainDisplayID(), selection: .zero)
+    XCTAssertTrue(window.resultWindow === result)
+    XCTAssertTrue(result.isVisible)
+    window.performClose(nil)
+    XCTAssertFalse(window.isVisible)
+    XCTAssertTrue(result.isVisible)
+    XCTAssertNotNil(window.contentViewController)
   }
 
   // 只把 ScreenCaptureKit 的实际拒绝识别为权限错误，保留其他捕获错误的诊断信息。

@@ -23,6 +23,7 @@ import 'package:xiaoan_tsl/services/translation/translation_service_provider.dar
 import 'package:xiaoan_tsl/services/translation/translation_settings.dart';
 import 'package:xiaoan_tsl/services/speech/speech_service_provider.dart';
 import 'package:xiaoan_tsl/services/speech/tts_service.dart';
+import 'package:xiaoan_tsl/services/desktop/macos_desktop_service.dart';
 
 import 'support/test_translation_services.dart';
 
@@ -165,6 +166,38 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('macOS 截图快捷键保留主页和输入，不再把结果路由压到主页上', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    container.invalidate(translationPlatformProvider);
+    const channel = MethodChannel('xiaoan_tsl/macos_desktop');
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'captureRegion') return {'cancelled': true};
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    const events = EventChannel('xiaoan_tsl/macos_desktop_events');
+    MockStreamHandlerEventSink? sink;
+    messenger.setMockStreamHandler(events, MockStreamHandler.inline(
+      onListen: (_, eventSink) {
+        sink = eventSink;
+      },
+    ));
+    addTearDown(() => messenger.setMockStreamHandler(events, null));
+    await pumpApp(tester);
+    await tester.enterText(
+        find.byKey(const Key('sourceInput')), 'Keep my draft');
+    sink!.success('screenshotHotkey');
+    await tester.pumpAndSettle();
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byKey(const Key('sourceInput')), findsOneWidget);
+    expect(container.read(appControllerProvider).input, 'Keep my draft');
+    expect(container.read(macosDesktopServiceProvider),
+        isA<MacosDesktopChannel>());
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   testWidgets('macOS 设置主页可选择并保存全局截图快捷键，冲突保留旧设置', (tester) async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;

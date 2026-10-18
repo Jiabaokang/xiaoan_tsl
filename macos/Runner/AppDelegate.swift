@@ -157,6 +157,7 @@ class AppDelegate: FlutterAppDelegate {
 
   // 明确退出时注销快捷键与通道，避免残留注册。
   override func applicationWillTerminate(_ notification: Notification) {
+    mainWindow?.shutdownResultWindow()
     desktopBridge?.shutdown()
   }
 

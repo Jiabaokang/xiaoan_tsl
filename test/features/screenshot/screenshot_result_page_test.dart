@@ -77,6 +77,9 @@ class _PageDesktop implements MacosDesktopService {
   }) async {}
 
   @override
+  Future<void> updateResult(Map<String, Object?> state) async {}
+
+  @override
   Future<void> cancelCapture(String requestId) async {}
 
   @override
@@ -99,7 +102,8 @@ class _PageTranslation implements TranslationService {
     required String text,
     required String sourceLanguage,
     required String targetLanguage,
-  }) async => '你好，世界！';
+  }) async =>
+      '你好，世界！';
 }
 
 void main() {

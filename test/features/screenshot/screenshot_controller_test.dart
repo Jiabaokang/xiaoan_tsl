@@ -58,6 +58,9 @@ class _FakeDesktopService implements MacosDesktopService {
   }) async {}
 
   @override
+  Future<void> updateResult(Map<String, Object?> state) async {}
+
+  @override
   Future<void> cancelCapture(String requestId) async {}
 
   @override

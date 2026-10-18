@@ -75,6 +75,12 @@ enum MacosDesktopEvent {
 
   // 菜单“设置”触发，Dart 导航到设置页。
   openSettings,
+
+  // 系统关闭结果窗口，只结束截图会话，不退出主应用。
+  dismissScreenshot,
+  confirmScreenshot,
+  retryScreenshot,
+  openTranslationSettings,
 }
 
 // 桌面能力边界；非 macOS 使用不支持实现，调用方不猜测平台。
@@ -92,6 +98,9 @@ abstract interface class MacosDesktopService {
 
   Future<void> cancelCapture(String requestId);
 
+  // 同步结果窗口的展示快照，业务仍在主引擎内执行。
+  Future<void> updateResult(Map<String, Object?> state);
+
   // 注册全局截图快捷键；格式如 “Control+Option+T”。注册新键成功后才替换旧键。
   Future<void> updateShortcut(String shortcut);
 
@@ -102,8 +111,7 @@ abstract interface class MacosDesktopService {
 // 单个 MethodChannel 实现；通道只由目标平台处理。
 class MacosDesktopChannel implements MacosDesktopService {
   MacosDesktopChannel({MethodChannel? channel})
-      : _channel = channel ??
-            const MethodChannel('xiaoan_tsl/macos_desktop');
+      : _channel = channel ?? const MethodChannel('xiaoan_tsl/macos_desktop');
 
   static const _methodCapture = 'captureRegion';
   static const _methodRecognize = 'recognizeText';
@@ -117,13 +125,25 @@ class MacosDesktopChannel implements MacosDesktopService {
 
   // 原生事件流；broadcast 允许页面与应用级监听各自订阅。
   late final Stream<MacosDesktopEvent> _events =
-      const EventChannel(_eventChannelName).receiveBroadcastStream().map((event) {
-    if (event == 'openSettings') return MacosDesktopEvent.openSettings;
-    return MacosDesktopEvent.screenshotHotkey;
+      const EventChannel(_eventChannelName)
+          .receiveBroadcastStream()
+          .map((event) {
+    return switch (event) {
+      'openSettings' => MacosDesktopEvent.openSettings,
+      'dismissScreenshot' => MacosDesktopEvent.dismissScreenshot,
+      'confirmScreenshot' => MacosDesktopEvent.confirmScreenshot,
+      'retryScreenshot' => MacosDesktopEvent.retryScreenshot,
+      'openTranslationSettings' => MacosDesktopEvent.openTranslationSettings,
+      _ => MacosDesktopEvent.screenshotHotkey,
+    };
   });
 
   @override
   Stream<MacosDesktopEvent> get events => _events;
+
+  @override
+  Future<void> updateResult(Map<String, Object?> state) =>
+      _channel.invokeMethod<void>('updateResult', state);
 
   @override
   Future<void> updateShortcut(String shortcut) async {
@@ -252,9 +272,11 @@ class MacosDesktopChannel implements MacosDesktopService {
         case 'ocrFailed':
           throw MacosDesktopOcrException(error.message ?? 'OCR 识别失败');
         case 'shortcutConflict':
-          throw MacosDesktopShortcutConflictException(error.message ?? '快捷键注册冲突');
+          throw MacosDesktopShortcutConflictException(
+              error.message ?? '快捷键注册冲突');
         case 'platformUnsupported':
-          throw MacosDesktopPlatformUnsupportedException(error.message ?? '平台不支持该能力');
+          throw MacosDesktopPlatformUnsupportedException(
+              error.message ?? '平台不支持该能力');
       }
     }
     if (error is MissingPluginException) {
@@ -266,6 +288,9 @@ class MacosDesktopChannel implements MacosDesktopService {
 
 // 非 macOS 的明确不支持实现，不触达任何原生通道。
 class MacosDesktopUnsupportedService implements MacosDesktopService {
+  @override
+  Future<void> updateResult(Map<String, Object?> state) async {}
+
   @override
   Future<CaptureRegionResult> captureRegion(String requestId) async {
     throw const MacosDesktopPlatformUnsupportedException(
