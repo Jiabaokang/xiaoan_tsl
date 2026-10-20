@@ -21,7 +21,7 @@ enum ScreenshotStage {
   needsConfirm,
   translating,
   done,
-  failed
+  failed,
 }
 
 // 截图翻译失败分类；页面据此选择本地化文案。
@@ -109,13 +109,11 @@ class ScreenshotState {
 // 新截图、服务切换都会使旧会话失效，晚到的响应既不显示也不写入历史。
 final screenshotControllerProvider =
     NotifierProvider<ScreenshotController, ScreenshotState>(
-  ScreenshotController.new,
-);
+      ScreenshotController.new,
+    );
 
 class ScreenshotController extends Notifier<ScreenshotState> {
-  ScreenshotController({
-    this.translateTimeout = const Duration(seconds: 30),
-  });
+  ScreenshotController({this.translateTimeout = const Duration(seconds: 30)});
 
   // 翻译调用超时；测试可注入更短时长。
   final Duration translateTimeout;
@@ -214,8 +212,9 @@ class ScreenshotController extends Notifier<ScreenshotState> {
         displayId: state.displayId,
         recognizedText: trimmed,
       );
-      final detected =
-          await ref.read(languageDetectionProvider).identify(trimmed);
+      final detected = await ref
+          .read(languageDetectionProvider)
+          .identify(trimmed);
       if (!ref.mounted || session != _session) return;
       if (detected != 'en') {
         // 低置信度或非英文先提示；用户明确“按英文翻译”后才发请求。

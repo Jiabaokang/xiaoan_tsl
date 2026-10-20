@@ -26,7 +26,10 @@ class _FakeCredentials implements SecureCredentialStore {
 
   @override
   Future<bool> hasBaiduCredentials() async =>
-      appId != null && appId!.isNotEmpty && secret != null && secret!.isNotEmpty;
+      appId != null &&
+      appId!.isNotEmpty &&
+      secret != null &&
+      secret!.isNotEmpty;
 
   @override
   Future<void> writeBaiduCredentials({

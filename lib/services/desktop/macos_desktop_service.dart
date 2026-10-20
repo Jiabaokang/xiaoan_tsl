@@ -111,7 +111,7 @@ abstract interface class MacosDesktopService {
 // 单个 MethodChannel 实现；通道只由目标平台处理。
 class MacosDesktopChannel implements MacosDesktopService {
   MacosDesktopChannel({MethodChannel? channel})
-      : _channel = channel ?? const MethodChannel('xiaoan_tsl/macos_desktop');
+    : _channel = channel ?? const MethodChannel('xiaoan_tsl/macos_desktop');
 
   static const _methodCapture = 'captureRegion';
   static const _methodRecognize = 'recognizeText';
@@ -125,18 +125,19 @@ class MacosDesktopChannel implements MacosDesktopService {
 
   // 原生事件流；broadcast 允许页面与应用级监听各自订阅。
   late final Stream<MacosDesktopEvent> _events =
-      const EventChannel(_eventChannelName)
-          .receiveBroadcastStream()
-          .map((event) {
-    return switch (event) {
-      'openSettings' => MacosDesktopEvent.openSettings,
-      'dismissScreenshot' => MacosDesktopEvent.dismissScreenshot,
-      'confirmScreenshot' => MacosDesktopEvent.confirmScreenshot,
-      'retryScreenshot' => MacosDesktopEvent.retryScreenshot,
-      'openTranslationSettings' => MacosDesktopEvent.openTranslationSettings,
-      _ => MacosDesktopEvent.screenshotHotkey,
-    };
-  });
+      const EventChannel(_eventChannelName).receiveBroadcastStream().map((
+        event,
+      ) {
+        return switch (event) {
+          'openSettings' => MacosDesktopEvent.openSettings,
+          'dismissScreenshot' => MacosDesktopEvent.dismissScreenshot,
+          'confirmScreenshot' => MacosDesktopEvent.confirmScreenshot,
+          'retryScreenshot' => MacosDesktopEvent.retryScreenshot,
+          'openTranslationSettings' =>
+            MacosDesktopEvent.openTranslationSettings,
+          _ => MacosDesktopEvent.screenshotHotkey,
+        };
+      });
 
   @override
   Stream<MacosDesktopEvent> get events => _events;
@@ -148,10 +149,9 @@ class MacosDesktopChannel implements MacosDesktopService {
   @override
   Future<void> updateShortcut(String shortcut) async {
     try {
-      await _channel.invokeMethod<void>(
-        _methodUpdateShortcut,
-        <String, Object>{'shortcut': shortcut},
-      );
+      await _channel.invokeMethod<void>(_methodUpdateShortcut, <String, Object>{
+        'shortcut': shortcut,
+      });
     } catch (error) {
       _throwMapped(error);
     }
@@ -161,10 +161,9 @@ class MacosDesktopChannel implements MacosDesktopService {
   Future<CaptureRegionResult> captureRegion(String requestId) async {
     final Map<Object?, Object?> map;
     try {
-      map = await _invokeMap(
-        _methodCapture,
-        <String, Object>{'requestId': requestId},
-      );
+      map = await _invokeMap(_methodCapture, <String, Object>{
+        'requestId': requestId,
+      });
     } catch (error) {
       _throwMapped(error);
     }
@@ -187,10 +186,7 @@ class MacosDesktopChannel implements MacosDesktopService {
   }
 
   @override
-  Future<String> recognizeText(
-    String requestId,
-    Uint8List pngBytes,
-  ) async {
+  Future<String> recognizeText(String requestId, Uint8List pngBytes) async {
     final String? text;
     try {
       text = await _channel.invokeMethod<String>(
@@ -223,16 +219,13 @@ class MacosDesktopChannel implements MacosDesktopService {
     required Rect selection,
   }) async {
     try {
-      await _channel.invokeMethod<void>(
-        _methodShowResult,
-        <String, Object>{
-          'displayId': displayId,
-          'x': selection.left,
-          'y': selection.top,
-          'width': selection.width,
-          'height': selection.height,
-        },
-      );
+      await _channel.invokeMethod<void>(_methodShowResult, <String, Object>{
+        'displayId': displayId,
+        'x': selection.left,
+        'y': selection.top,
+        'width': selection.width,
+        'height': selection.height,
+      });
     } catch (error) {
       _throwMapped(error);
     }
@@ -241,10 +234,9 @@ class MacosDesktopChannel implements MacosDesktopService {
   @override
   Future<void> cancelCapture(String requestId) async {
     try {
-      await _channel.invokeMethod<void>(
-        _methodCancel,
-        <String, Object>{'requestId': requestId},
-      );
+      await _channel.invokeMethod<void>(_methodCancel, <String, Object>{
+        'requestId': requestId,
+      });
     } catch (error) {
       _throwMapped(error);
     }
@@ -273,10 +265,12 @@ class MacosDesktopChannel implements MacosDesktopService {
           throw MacosDesktopOcrException(error.message ?? 'OCR 识别失败');
         case 'shortcutConflict':
           throw MacosDesktopShortcutConflictException(
-              error.message ?? '快捷键注册冲突');
+            error.message ?? '快捷键注册冲突',
+          );
         case 'platformUnsupported':
           throw MacosDesktopPlatformUnsupportedException(
-              error.message ?? '平台不支持该能力');
+            error.message ?? '平台不支持该能力',
+          );
       }
     }
     if (error is MissingPluginException) {
@@ -293,16 +287,12 @@ class MacosDesktopUnsupportedService implements MacosDesktopService {
 
   @override
   Future<CaptureRegionResult> captureRegion(String requestId) async {
-    throw const MacosDesktopPlatformUnsupportedException(
-      '当前平台不支持桌面截图能力',
-    );
+    throw const MacosDesktopPlatformUnsupportedException('当前平台不支持桌面截图能力');
   }
 
   @override
   Future<String> recognizeText(String requestId, Uint8List pngBytes) async {
-    throw const MacosDesktopPlatformUnsupportedException(
-      '当前平台不支持桌面截图能力',
-    );
+    throw const MacosDesktopPlatformUnsupportedException('当前平台不支持桌面截图能力');
   }
 
   @override
@@ -313,9 +303,7 @@ class MacosDesktopUnsupportedService implements MacosDesktopService {
     required int displayId,
     required Rect selection,
   }) async {
-    throw const MacosDesktopPlatformUnsupportedException(
-      '当前平台不支持桌面截图能力',
-    );
+    throw const MacosDesktopPlatformUnsupportedException('当前平台不支持桌面截图能力');
   }
 
   @override
@@ -323,9 +311,7 @@ class MacosDesktopUnsupportedService implements MacosDesktopService {
 
   @override
   Future<void> updateShortcut(String shortcut) async {
-    throw const MacosDesktopPlatformUnsupportedException(
-      '当前平台不支持桌面截图能力',
-    );
+    throw const MacosDesktopPlatformUnsupportedException('当前平台不支持桌面截图能力');
   }
 
   @override

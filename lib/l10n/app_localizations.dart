@@ -660,12 +660,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get downloadDetailsCopied => '错误详情已复制';
   @override
   String modelDownloadFailure(String reason) => switch (reason) {
-        'network' => '下载连接失败，请检查网络或切换网络后重试',
-        'storage' => '设备存储空间不足，请释放空间后重试',
-        'integrity' => '语言包校验失败，请重试下载',
-        'unavailable' => '语言包暂时不可用，请稍后重试',
-        _ => '语言包下载失败，暂时无法确定原因，请稍后重试',
-      };
+    'network' => '下载连接失败，请检查网络或切换网络后重试',
+    'storage' => '设备存储空间不足，请释放空间后重试',
+    'integrity' => '语言包校验失败，请重试下载',
+    'unavailable' => '语言包暂时不可用，请稍后重试',
+    _ => '语言包下载失败，暂时无法确定原因，请稍后重试',
+  };
   @override
   String modelDownloadStep(int current, int total) =>
       '正在下载第 $current / $total 个语言包';
@@ -1221,15 +1221,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadDetailsCopied => 'Error details copied';
   @override
   String modelDownloadFailure(String reason) => switch (reason) {
-        'network' =>
-          'Connection failed. Check or switch your network, then retry.',
-        'storage' => 'Not enough device storage. Free up space, then retry.',
-        'integrity' => 'Language pack verification failed. Retry the download.',
-        'unavailable' =>
-          'The language pack is temporarily unavailable. Try again later.',
-        _ =>
-          'Language pack download failed for an unknown reason. Try again later.',
-      };
+    'network' => 'Connection failed. Check or switch your network, then retry.',
+    'storage' => 'Not enough device storage. Free up space, then retry.',
+    'integrity' => 'Language pack verification failed. Retry the download.',
+    'unavailable' =>
+      'The language pack is temporarily unavailable. Try again later.',
+    _ =>
+      'Language pack download failed for an unknown reason. Try again later.',
+  };
   @override
   String modelDownloadStep(int current, int total) =>
       'Downloading language pack $current of $total';

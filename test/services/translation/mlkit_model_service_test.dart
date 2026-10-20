@@ -19,9 +19,10 @@ void main() {
       calls.add(call);
       if (!downloadSucceeds) {
         throw PlatformException(
-            code: 'storage',
-            message: 'disk full',
-            details: {'nativeCode': 101});
+          code: 'storage',
+          message: 'disk full',
+          details: {'nativeCode': 101},
+        );
       }
       return 'success';
     });
@@ -46,11 +47,9 @@ void main() {
     await service.download('en');
     await service.delete('en');
     expect(
-        calls.map((call) => (call.arguments as Map)['task'] ?? call.method), [
-      'check',
-      'download',
-      'delete',
-    ]);
+      calls.map((call) => (call.arguments as Map)['task'] ?? call.method),
+      ['check', 'download', 'delete'],
+    );
     expect((calls[1].arguments as Map)['model'], 'en');
     expect((calls[1].arguments as Map)['wifiOnly'], isTrue);
   });
@@ -59,9 +58,15 @@ void main() {
     final service = MlKitModelService();
     downloadSucceeds = false;
     await expectLater(
-        service.download('zh'),
-        throwsA(isA<StateError>()
-            .having((e) => e.message, 'diagnostics', contains('disk full'))));
+      service.download('zh'),
+      throwsA(
+        isA<StateError>().having(
+          (e) => e.message,
+          'diagnostics',
+          contains('disk full'),
+        ),
+      ),
+    );
     calls.clear();
     await expectLater(service.isDownloaded('xx'), throwsArgumentError);
     expect(calls, isEmpty);

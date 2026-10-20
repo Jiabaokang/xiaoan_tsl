@@ -155,9 +155,9 @@ class AppDelegate: FlutterAppDelegate {
     installMenuBar()
   }
 
-  // 明确退出时注销快捷键与通道，避免残留注册。
+  // 明确退出时释放覆盖面板与快捷键。
   override func applicationWillTerminate(_ notification: Notification) {
-    mainWindow?.shutdownResultWindow()
+    mainWindow?.shutdownOverlayPanel()
     desktopBridge?.shutdown()
   }
 

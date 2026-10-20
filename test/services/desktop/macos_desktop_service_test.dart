@@ -8,9 +8,7 @@ import 'package:xiaoan_tsl/services/desktop/macos_desktop_service.dart';
 class _ChannelStub {
   _ChannelStub(this.handler);
 
-  Future<Object?> Function(
-    MethodCall call,
-  ) handler;
+  Future<Object?> Function(MethodCall call) handler;
 
   final calls = <MethodCall>[];
   String? lastRequestId;
@@ -45,17 +43,17 @@ void main() {
   test('captureRegion 解析 requestId、PNG、displayId、选区与像素尺寸', () async {
     final service = MacosDesktopChannel();
     stub.handler = (call) async => <Object?, Object?>{
-          'requestId': 'req-1',
-          'cancelled': false,
-          'png': Uint8List.fromList([1, 2, 3]),
-          'displayId': 1001,
-          'x': -120.0,
-          'y': 40.0,
-          'width': 640.0,
-          'height': 200.0,
-          'pixelWidth': 2560,
-          'pixelHeight': 800,
-        };
+      'requestId': 'req-1',
+      'cancelled': false,
+      'png': Uint8List.fromList([1, 2, 3]),
+      'displayId': 1001,
+      'x': -120.0,
+      'y': 40.0,
+      'width': 640.0,
+      'height': 200.0,
+      'pixelWidth': 2560,
+      'pixelHeight': 800,
+    };
 
     final result = await service.captureRegion('req-1');
     expect(stub.lastRequestId, 'req-1');
@@ -74,9 +72,9 @@ void main() {
   test('captureRegion 取消返回 cancelled 而不是异常', () async {
     final service = MacosDesktopChannel();
     stub.handler = (call) async => <Object?, Object?>{
-          'requestId': 'req-2',
-          'cancelled': true,
-        };
+      'requestId': 'req-2',
+      'cancelled': true,
+    };
 
     final result = await service.captureRegion('req-2');
     expect(result.cancelled, isTrue);

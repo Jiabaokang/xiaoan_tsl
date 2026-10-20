@@ -43,9 +43,7 @@ class AboutPage extends StatelessWidget {
     final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.aboutAppLabel),
-      ),
+      appBar: AppBar(title: Text(l10n.aboutAppLabel)),
       body: SingleChildScrollView(
         // 滚动留白叠加系统边衬，避免末项和横屏内容被系统区域遮挡。
         padding:
@@ -54,13 +52,9 @@ class AboutPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _AboutBrandHeader(
-              packageInfoFuture: packageInfoFuture,
-            ),
+            _AboutBrandHeader(packageInfoFuture: packageInfoFuture),
             const SizedBox(height: 16),
-            _AboutTaglineCard(
-              tagline: l10n.aboutTagline,
-            ),
+            _AboutTaglineCard(tagline: l10n.aboutTagline),
             const SizedBox(height: 16),
             const _AboutFeaturesCard(),
             const SizedBox(height: 16),
@@ -70,9 +64,7 @@ class AboutPage extends StatelessWidget {
               sourceUrlLauncher: sourceUrlLauncher,
             ),
             const SizedBox(height: 24),
-            _AboutFooter(
-              copyrightNotice: l10n.copyrightNotice,
-            ),
+            _AboutFooter(copyrightNotice: l10n.copyrightNotice),
             const SizedBox(height: 16),
           ],
         ),
@@ -275,11 +267,7 @@ class _AboutFeatureItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
-            child: Icon(
-              icon,
-              size: 20,
-              color: scheme.primary,
-            ),
+            child: Icon(icon, size: 20, color: scheme.primary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -352,8 +340,11 @@ class _AboutServicesCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
-                child:
-                    Icon(Icons.code_outlined, size: 20, color: scheme.primary),
+                child: Icon(
+                  Icons.code_outlined,
+                  size: 20,
+                  color: scheme.primary,
+                ),
               ),
               title: Text(
                 l10n.projectSourceLabel,
@@ -488,9 +479,7 @@ class _AboutFooter extends StatelessWidget {
     return Center(
       child: Text(
         copyrightNotice,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: scheme.outline,
-        ),
+        style: theme.textTheme.bodySmall?.copyWith(color: scheme.outline),
         textAlign: TextAlign.center,
       ),
     );

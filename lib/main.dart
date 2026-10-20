@@ -8,8 +8,6 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import 'package:xiaoan_tsl/app.dart';
-import 'package:xiaoan_tsl/features/screenshot/screenshot_window_app.dart';
-import 'package:xiaoan_tsl/features/screenshot/screenshot_controller.dart';
 import 'package:xiaoan_tsl/core/database/database_provider.dart';
 import 'package:xiaoan_tsl/core/database/local_store.dart';
 import 'package:xiaoan_tsl/services/desktop/macos_desktop_service.dart';
@@ -28,7 +26,7 @@ Future<void> main() async {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
       final shortcut =
           await store.getSetting(TranslationSettingKeys.screenshotShortcut) ??
-              'Control+Option+T';
+          'Control+Option+T';
       try {
         await MacosDesktopChannel().updateShortcut(shortcut);
       } catch (_) {
@@ -62,14 +60,9 @@ Future<void> main() async {
   }
 }
 
-// 独立结果引擎只启动展示与操作转发，不打开数据库或注册全局快捷键。
+// 独立结果引擎已废弃：原位覆盖面板由原生 NSView 渲染，不再启动第二个 Flutter Engine。
+// 保留入口避免原生侧未清理的旧引用在运行时崩溃。
 @pragma('vm:entry-point')
 void screenshotWindowMain() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(ProviderScope(
-    overrides: [
-      screenshotControllerProvider.overrideWith(ScreenshotWindowController.new)
-    ],
-    child: const ScreenshotWindowApp(),
-  ));
+  // 已被原生覆盖面板替代，此入口不再实际使用。
 }

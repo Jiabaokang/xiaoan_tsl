@@ -47,8 +47,8 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
   }
 
   void _refresh() => setState(() {
-        _status = _loadStatus();
-      });
+    _status = _loadStatus();
+  });
 
   Future<void> _operate(
     String code, {
@@ -111,8 +111,10 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
     final downloads = ref.watch(modelDownloadsProvider);
     ref.listen(modelDownloadsProvider, (previous, next) {
       if (previous != null &&
-          next.entries.any((entry) =>
-              previous[entry.key]?.isActive == true && !entry.value.isActive)) {
+          next.entries.any(
+            (entry) =>
+                previous[entry.key]?.isActive == true && !entry.value.isActive,
+          )) {
         _refresh();
       }
     });
@@ -169,36 +171,36 @@ class _OfflineModelsPageState extends ConsumerState<OfflineModelsPage> {
                                   : () => _confirmDownload(entry.key),
                             ),
                           )
-                        : Text(entry.value
-                            ? l10n.statusDownloaded
-                            : l10n.statusNotDownloaded),
-                    trailing: entry.key == 'en' &&
+                        : Text(
+                            entry.value
+                                ? l10n.statusDownloaded
+                                : l10n.statusNotDownloaded,
+                          ),
+                    trailing:
+                        entry.key == 'en' &&
                             ref.watch(translationPlatformProvider) ==
                                 TranslationPlatform.ios
                         ? Text(l10n.bundledModel)
                         : _operatingCode == entry.key ||
-                                downloads[entry.key]?.isActive == true ||
-                                downloads[entry.key]?.phase ==
-                                    ModelDownloadPhase.failed
-                            ? null
-                            : entry.value
-                                ? TextButton(
-                                    key: Key('delete_${entry.key}'),
-                                    onPressed: translating ||
-                                            _operatingCode != null
-                                        ? null
-                                        : () =>
-                                            _operate(entry.key, remove: true),
-                                    child: Text(l10n.deleteAction),
-                                  )
-                                : FilledButton.tonal(
-                                    key: Key('download_${entry.key}'),
-                                    onPressed:
-                                        translating || _operatingCode != null
-                                            ? null
-                                            : () => _confirmDownload(entry.key),
-                                    child: Text(l10n.downloadAction),
-                                  ),
+                              downloads[entry.key]?.isActive == true ||
+                              downloads[entry.key]?.phase ==
+                                  ModelDownloadPhase.failed
+                        ? null
+                        : entry.value
+                        ? TextButton(
+                            key: Key('delete_${entry.key}'),
+                            onPressed: translating || _operatingCode != null
+                                ? null
+                                : () => _operate(entry.key, remove: true),
+                            child: Text(l10n.deleteAction),
+                          )
+                        : FilledButton.tonal(
+                            key: Key('download_${entry.key}'),
+                            onPressed: translating || _operatingCode != null
+                                ? null
+                                : () => _confirmDownload(entry.key),
+                            child: Text(l10n.downloadAction),
+                          ),
                   ),
               ],
             );

@@ -31,8 +31,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               systemNavigationBarColor: barColor,
               systemNavigationBarIconBrightness:
                   theme.brightness == Brightness.light
-                      ? Brightness.dark
-                      : Brightness.light,
+                  ? Brightness.dark
+                  : Brightness.light,
               systemNavigationBarContrastEnforced: false,
             ),
             child: Scaffold(
@@ -122,10 +122,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/privacy',
         builder: (context, state) => const PrivacyPolicyPage(),
       ),
-      GoRoute(
-        path: '/about',
-        builder: (context, state) => const AboutPage(),
-      ),
+      GoRoute(path: '/about', builder: (context, state) => const AboutPage()),
       GoRoute(
         path: '/about/dependencies',
         builder: (context, state) => const OpenSourceLicensesPage(),

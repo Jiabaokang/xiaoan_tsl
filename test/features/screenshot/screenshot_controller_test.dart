@@ -123,8 +123,7 @@ class _ThrowingSaveStore implements LocalStore {
   Future<List<TranslationRecord>> search(
     String query, {
     bool favoritesOnly = false,
-  }) =>
-      _base.search(query, favoritesOnly: favoritesOnly);
+  }) => _base.search(query, favoritesOnly: favoritesOnly);
 
   @override
   Future<TranslationRecord?> getRecord(String id) => _base.getRecord(id);
@@ -149,14 +148,14 @@ class _ThrowingSaveStore implements LocalStore {
 }
 
 CaptureRegionResult _payload({bool cancelled = false}) => CaptureRegionResult(
-      requestId: 'shot-1',
-      cancelled: cancelled,
-      pngBytes: cancelled ? null : Uint8List.fromList([1, 2, 3]),
-      displayId: cancelled ? null : 1001,
-      selection: cancelled ? null : const Rect.fromLTWH(10, 20, 300, 120),
-      pixelWidth: 600,
-      pixelHeight: 240,
-    );
+  requestId: 'shot-1',
+  cancelled: cancelled,
+  pngBytes: cancelled ? null : Uint8List.fromList([1, 2, 3]),
+  displayId: cancelled ? null : 1001,
+  selection: cancelled ? null : const Rect.fromLTWH(10, 20, 300, 120),
+  pixelWidth: 600,
+  pixelHeight: 240,
+);
 
 // 桌面替身的默认捕获结果。
 final _defaultPayload = _payload();
@@ -169,8 +168,9 @@ void main() {
     required TranslationService translation,
     Duration? translateTimeout,
   }) async {
-    final directory =
-        await Directory.systemTemp.createTemp('xiaoan_screenshot_');
+    final directory = await Directory.systemTemp.createTemp(
+      'xiaoan_screenshot_',
+    );
     final store = await LocalStore.open(
       path: path.join(directory.path, 'app.db'),
       legacyFile: File(path.join(directory.path, 'none.json')),
@@ -208,11 +208,14 @@ void main() {
       desktop: _FakeDesktopService(capturePayload: _payload(cancelled: true)),
       translation: _CountingTranslationService(),
     );
-    final translation = container.read(translationServiceProvider)
-        as _CountingTranslationService;
+    final translation =
+        container.read(translationServiceProvider)
+            as _CountingTranslationService;
     await container.read(screenshotControllerProvider.notifier).startCapture();
-    expect(container.read(screenshotControllerProvider).stage,
-        ScreenshotStage.idle);
+    expect(
+      container.read(screenshotControllerProvider).stage,
+      ScreenshotStage.idle,
+    );
     expect(translation.calls, 0);
     expect((await store.search('')).length, 0);
     await teardown(container, store, dir);
@@ -225,8 +228,9 @@ void main() {
       ),
       translation: _CountingTranslationService(),
     );
-    final translation = container.read(translationServiceProvider)
-        as _CountingTranslationService;
+    final translation =
+        container.read(translationServiceProvider)
+            as _CountingTranslationService;
     await container.read(screenshotControllerProvider.notifier).startCapture();
     final state = container.read(screenshotControllerProvider);
     expect(state.stage, ScreenshotStage.failed);
@@ -240,8 +244,9 @@ void main() {
       desktop: _FakeDesktopService(ocrText: '   '),
       translation: _CountingTranslationService(),
     );
-    final translation = container.read(translationServiceProvider)
-        as _CountingTranslationService;
+    final translation =
+        container.read(translationServiceProvider)
+            as _CountingTranslationService;
     await container.read(screenshotControllerProvider.notifier).startCapture();
     final state = container.read(screenshotControllerProvider);
     expect(state.stage, ScreenshotStage.failed);
@@ -255,8 +260,9 @@ void main() {
       desktop: _FakeDesktopService(ocrText: 'a' * 5001),
       translation: _CountingTranslationService(),
     );
-    final translation = container.read(translationServiceProvider)
-        as _CountingTranslationService;
+    final translation =
+        container.read(translationServiceProvider)
+            as _CountingTranslationService;
     await container.read(screenshotControllerProvider.notifier).startCapture();
     final state = container.read(screenshotControllerProvider);
     expect(state.stage, ScreenshotStage.failed);
@@ -270,8 +276,9 @@ void main() {
       desktop: _FakeDesktopService(ocrText: '谢谢你的帮助'),
       translation: _CountingTranslationService(),
     );
-    final translation = container.read(translationServiceProvider)
-        as _CountingTranslationService;
+    final translation =
+        container.read(translationServiceProvider)
+            as _CountingTranslationService;
     final controller = container.read(screenshotControllerProvider.notifier);
     await controller.startCapture();
     var state = container.read(screenshotControllerProvider);
@@ -295,8 +302,9 @@ void main() {
       desktop: _FakeDesktopService(ocrText: 'hello world'),
       translation: _CountingTranslationService(),
     );
-    final translation = container.read(translationServiceProvider)
-        as _CountingTranslationService;
+    final translation =
+        container.read(translationServiceProvider)
+            as _CountingTranslationService;
     await container.read(screenshotControllerProvider.notifier).startCapture();
     final state = container.read(screenshotControllerProvider);
     expect(state.stage, ScreenshotStage.done);
@@ -313,8 +321,9 @@ void main() {
         error: const BaiduConfigException('缺少凭据'),
       ),
     );
-    final translation = container.read(translationServiceProvider)
-        as _CountingTranslationService;
+    final translation =
+        container.read(translationServiceProvider)
+            as _CountingTranslationService;
     await container.read(screenshotControllerProvider.notifier).startCapture();
     final state = container.read(screenshotControllerProvider);
     expect(state.stage, ScreenshotStage.failed);
@@ -326,9 +335,7 @@ void main() {
   test('翻译超时进入 failed', () async {
     final (container, store, dir) = await makeContainer(
       desktop: _FakeDesktopService(),
-      translation: _CountingTranslationService(
-        deferred: Completer<String>(),
-      ),
+      translation: _CountingTranslationService(deferred: Completer<String>()),
       translateTimeout: const Duration(milliseconds: 100),
     );
     final controller = container.read(screenshotControllerProvider.notifier);
@@ -350,15 +357,19 @@ void main() {
     // 不等待整个流程：翻译会挂起在未完成的响应上。
     final run1 = controller.startCapture();
     await Future<void>.delayed(const Duration(milliseconds: 50));
-    expect(container.read(screenshotControllerProvider).stage,
-        ScreenshotStage.translating);
+    expect(
+      container.read(screenshotControllerProvider).stage,
+      ScreenshotStage.translating,
+    );
     // 旧会话翻译未完成时开启新截图。
     final second = Completer<String>();
     translation.deferred = second;
     final run2 = controller.startCapture();
     await Future<void>.delayed(const Duration(milliseconds: 50));
-    expect(container.read(screenshotControllerProvider).stage,
-        ScreenshotStage.translating);
+    expect(
+      container.read(screenshotControllerProvider).stage,
+      ScreenshotStage.translating,
+    );
     // 旧响应晚到：必须被丢弃。
     first.complete('旧译文');
     await run1;
@@ -386,17 +397,23 @@ void main() {
     final controller = container.read(screenshotControllerProvider.notifier);
     final run = controller.startCapture();
     await Future<void>.delayed(const Duration(milliseconds: 50));
-    expect(container.read(screenshotControllerProvider).stage,
-        ScreenshotStage.translating);
+    expect(
+      container.read(screenshotControllerProvider).stage,
+      ScreenshotStage.translating,
+    );
     // 切换服务偏好。
     await container.read(translationEngineProvider.notifier).setEngine('mlkit');
-    expect(container.read(screenshotControllerProvider).stage,
-        ScreenshotStage.idle);
+    expect(
+      container.read(screenshotControllerProvider).stage,
+      ScreenshotStage.idle,
+    );
     // 晚到的旧响应不得显示或写入历史。
     deferred.complete('旧译文');
     await run;
-    expect(container.read(screenshotControllerProvider).stage,
-        ScreenshotStage.idle);
+    expect(
+      container.read(screenshotControllerProvider).stage,
+      ScreenshotStage.idle,
+    );
     expect(container.read(screenshotControllerProvider).translatedText, isNull);
     expect((await store.search('')).length, 0);
     await teardown(container, store, dir);
@@ -407,16 +424,12 @@ void main() {
       desktop: _FakeDesktopService(),
       translation: _CountingTranslationService(),
     );
-    final store = _ThrowingSaveStore(
-      container.read(localStoreProvider),
-    );
+    final store = _ThrowingSaveStore(container.read(localStoreProvider));
     // 用会失败的包装替换存储。
     final failingContainer = ProviderContainer(
       overrides: [
         localStoreProvider.overrideWithValue(store),
-        macosDesktopServiceProvider.overrideWithValue(
-          _FakeDesktopService(),
-        ),
+        macosDesktopServiceProvider.overrideWithValue(_FakeDesktopService()),
         translationServiceProvider.overrideWithValue(
           _CountingTranslationService(),
         ),
@@ -461,8 +474,10 @@ void main() {
     );
     final controller = container.read(screenshotControllerProvider.notifier);
     await controller.startCapture();
-    expect(container.read(screenshotControllerProvider).stage,
-        ScreenshotStage.failed);
+    expect(
+      container.read(screenshotControllerProvider).stage,
+      ScreenshotStage.failed,
+    );
     // 清除错误后重试：复用原文直接翻译。
     translation.error = null;
     await controller.retry();
@@ -471,9 +486,10 @@ void main() {
     expect(state.translatedText, '你好，世界！');
     expect(translation.calls, 2);
     expect(
-        (container.read(macosDesktopServiceProvider) as _FakeDesktopService)
-            .ocrCalls,
-        1);
+      (container.read(macosDesktopServiceProvider) as _FakeDesktopService)
+          .ocrCalls,
+      1,
+    );
     expect((await store.search('hello world')).length, 1);
     await teardown(container, store, dir);
   });

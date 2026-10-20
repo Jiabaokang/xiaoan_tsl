@@ -56,7 +56,8 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            widget.favoritesOnly ? l10n.favoritesTitle : l10n.recordsTitle),
+          widget.favoritesOnly ? l10n.favoritesTitle : l10n.recordsTitle,
+        ),
       ),
       body: ListView(
         // 滚动留白叠加系统边衬，避免末项和横屏内容被系统区域遮挡。
@@ -92,8 +93,8 @@ class _RecordsPageState extends ConsumerState<RecordsPage> {
                     _search.text.isNotEmpty
                         ? l10n.noRecordsFound
                         : widget.favoritesOnly
-                            ? l10n.emptyFavorites
-                            : l10n.emptyRecords,
+                        ? l10n.emptyFavorites
+                        : l10n.emptyRecords,
                   ),
                 );
               }

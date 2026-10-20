@@ -19,8 +19,9 @@ void main() {
     testWidgets('独立窗口接收译文和${brightness.name}主题，操作转发而不访问数据库', (tester) async {
       final calls = <String>[];
       final messenger = tester.binding.defaultBinaryMessenger;
-      messenger.setMockMethodCallHandler(ScreenshotWindowController.channel,
-          (call) async {
+      messenger.setMockMethodCallHandler(ScreenshotWindowController.channel, (
+        call,
+      ) async {
         calls.add(call.method);
         if (call.method == 'ready') {
           return {
@@ -30,19 +31,28 @@ void main() {
         }
         return null;
       });
-      addTearDown(() => messenger.setMockMethodCallHandler(
-          ScreenshotWindowController.channel, null));
-      await tester.pumpWidget(ProviderScope(
-        overrides: [
-          screenshotControllerProvider
-              .overrideWith(ScreenshotWindowController.new)
-        ],
-        child: const ScreenshotWindowApp(),
-      ));
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(
+          ScreenshotWindowController.channel,
+          null,
+        ),
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            screenshotControllerProvider.overrideWith(
+              ScreenshotWindowController.new,
+            ),
+          ],
+          child: const ScreenshotWindowApp(),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.text('你好，世界！'), findsOneWidget);
-      expect(Theme.of(tester.element(find.byType(Scaffold))).brightness,
-          brightness);
+      expect(
+        Theme.of(tester.element(find.byType(Scaffold))).brightness,
+        brightness,
+      );
       await tester.tap(find.byKey(const Key('screenshotReshootButton')));
       await tester.pump();
       await tester.tap(find.byKey(const Key('screenshotCloseButton')));
@@ -53,11 +63,13 @@ void main() {
       const codec = StandardMethodCodec();
       await messenger.handlePlatformMessage(
         ScreenshotWindowController.channel.name,
-        codec.encodeMethodCall(MethodCall('update', {
-          ...snapshot,
-          'stage': 'idle',
-          'translatedText': null,
-        })),
+        codec.encodeMethodCall(
+          MethodCall('update', {
+            ...snapshot,
+            'stage': 'idle',
+            'translatedText': null,
+          }),
+        ),
         (_) {},
       );
       await tester.pumpAndSettle();
@@ -68,8 +80,9 @@ void main() {
   testWidgets('英文结果窗口的配置入口转发到主窗口', (tester) async {
     final calls = <String>[];
     final messenger = tester.binding.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(ScreenshotWindowController.channel,
-        (call) async {
+    messenger.setMockMethodCallHandler(ScreenshotWindowController.channel, (
+      call,
+    ) async {
       calls.add(call.method);
       if (call.method == 'ready') {
         return {
@@ -81,15 +94,22 @@ void main() {
       }
       return null;
     });
-    addTearDown(() => messenger.setMockMethodCallHandler(
-        ScreenshotWindowController.channel, null));
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        screenshotControllerProvider
-            .overrideWith(ScreenshotWindowController.new)
-      ],
-      child: const ScreenshotWindowApp(),
-    ));
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(
+        ScreenshotWindowController.channel,
+        null,
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          screenshotControllerProvider.overrideWith(
+            ScreenshotWindowController.new,
+          ),
+        ],
+        child: const ScreenshotWindowApp(),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Screenshot Translate'), findsOneWidget);
     await tester.tap(find.byKey(const Key('screenshotGoConfigButton')));
@@ -100,33 +120,43 @@ void main() {
   testWidgets('确认、重试和 Esc 由主引擎处理，窗口跟随新快照更新', (tester) async {
     final calls = <String>[];
     final messenger = tester.binding.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(ScreenshotWindowController.channel,
-        (call) async {
+    messenger.setMockMethodCallHandler(ScreenshotWindowController.channel, (
+      call,
+    ) async {
       calls.add(call.method);
       if (call.method == 'ready') {
         return {...snapshot, 'stage': 'needsConfirm', 'confirmRequired': true};
       }
       return null;
     });
-    addTearDown(() => messenger.setMockMethodCallHandler(
-        ScreenshotWindowController.channel, null));
-    await tester.pumpWidget(ProviderScope(
-      overrides: [
-        screenshotControllerProvider
-            .overrideWith(ScreenshotWindowController.new)
-      ],
-      child: const ScreenshotWindowApp(),
-    ));
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(
+        ScreenshotWindowController.channel,
+        null,
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          screenshotControllerProvider.overrideWith(
+            ScreenshotWindowController.new,
+          ),
+        ],
+        child: const ScreenshotWindowApp(),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('screenshotConfirmTranslate')));
     await tester.pump();
     await messenger.handlePlatformMessage(
       ScreenshotWindowController.channel.name,
-      const StandardMethodCodec().encodeMethodCall(MethodCall('update', {
-        ...snapshot,
-        'stage': 'failed',
-        'failure': 'timeout',
-      })),
+      const StandardMethodCodec().encodeMethodCall(
+        MethodCall('update', {
+          ...snapshot,
+          'stage': 'failed',
+          'failure': 'timeout',
+        }),
+      ),
       (_) {},
     );
     await tester.pumpAndSettle();

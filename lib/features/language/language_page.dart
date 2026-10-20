@@ -24,11 +24,12 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
   Widget build(BuildContext context) {
     final mode =
         const {'source', 'target', 'default-target'}.contains(widget.mode)
-            ? widget.mode
-            : 'source';
+        ? widget.mode
+        : 'source';
     final appState = ref.watch(appControllerProvider);
     final l10n = context.l10n;
-    final reversed = appState.sourceLanguage != 'auto' &&
+    final reversed =
+        appState.sourceLanguage != 'auto' &&
         appState.detectedLanguage == appState.targetLanguage;
     final selected = switch (mode) {
       'target' => appState.targetLanguage,
@@ -41,18 +42,16 @@ class _LanguagePageState extends ConsumerState<LanguagePage> {
       'default-target' => l10n.defaultTargetLanguage,
       _ => reversed ? l10n.selectTargetLanguage : l10n.selectSourceLanguage,
     };
-    final languages = appLanguages.entries.where(
-      (entry) {
-        if (entry.key == 'auto') return false;
-        final localizedName = l10n.languageName(entry.key).toLowerCase();
-        final rawName = entry.value.toLowerCase();
-        final code = entry.key.toLowerCase();
-        final q = _query.toLowerCase();
-        return localizedName.contains(q) ||
-            rawName.contains(q) ||
-            code.contains(q);
-      },
-    );
+    final languages = appLanguages.entries.where((entry) {
+      if (entry.key == 'auto') return false;
+      final localizedName = l10n.languageName(entry.key).toLowerCase();
+      final rawName = entry.value.toLowerCase();
+      final code = entry.key.toLowerCase();
+      final q = _query.toLowerCase();
+      return localizedName.contains(q) ||
+          rawName.contains(q) ||
+          code.contains(q);
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(title)),

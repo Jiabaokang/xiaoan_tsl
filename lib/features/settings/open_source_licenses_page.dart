@@ -50,9 +50,9 @@ Future<void> openDependencyMirror(
     // 无法调起系统浏览器或 URL 解析失败时降级提示。
   }
   if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.cannotOpenUrlNotice)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.cannotOpenUrlNotice)));
   }
 }
 
@@ -161,9 +161,7 @@ class OpenSourceLicensesPage extends StatelessWidget {
     final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.openSourceDependenciesTitle),
-      ),
+      appBar: AppBar(title: Text(l10n.openSourceDependenciesTitle)),
       body: SingleChildScrollView(
         // 滚动留白叠加系统边衬，避免末项和横屏内容被系统区域遮挡。
         padding:
@@ -181,10 +179,7 @@ class OpenSourceLicensesPage extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (index > 0) const Divider(height: 1, indent: 68),
-                  _DependencyListTile(
-                    pkg: pkg,
-                    urlLauncher: urlLauncher,
-                  ),
+                  _DependencyListTile(pkg: pkg, urlLauncher: urlLauncher),
                 ],
               );
             }),
@@ -215,19 +210,15 @@ class _OpenSourceHeaderNotice extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.info_outline,
-            size: 20,
-            color: scheme.primary,
-          ),
+          Icon(Icons.info_outline, size: 20, color: scheme.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               notice,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
+                color: scheme.onSurfaceVariant,
+                height: 1.4,
+              ),
             ),
           ),
         ],
@@ -238,10 +229,7 @@ class _OpenSourceHeaderNotice extends StatelessWidget {
 
 /// 单个第三方开源依赖列表项组件。
 class _DependencyListTile extends StatelessWidget {
-  const _DependencyListTile({
-    required this.pkg,
-    this.urlLauncher,
-  });
+  const _DependencyListTile({required this.pkg, this.urlLauncher});
 
   /// 对应的开源依赖元数据。
   final PackageDependency pkg;
@@ -264,11 +252,7 @@ class _DependencyListTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         alignment: Alignment.center,
-        child: Icon(
-          Icons.extension_outlined,
-          color: scheme.primary,
-          size: 22,
-        ),
+        child: Icon(Icons.extension_outlined, color: scheme.primary, size: 22),
       ),
       title: Row(
         children: [
@@ -310,17 +294,10 @@ class _DependencyListTile extends StatelessWidget {
         icon: const Icon(Icons.open_in_new, size: 20),
         color: scheme.primary,
         tooltip: pkg.mirrorUrl,
-        onPressed: () => openDependencyMirror(
-          context,
-          pkg,
-          urlLauncher: urlLauncher,
-        ),
+        onPressed: () =>
+            openDependencyMirror(context, pkg, urlLauncher: urlLauncher),
       ),
-      onTap: () => openDependencyMirror(
-        context,
-        pkg,
-        urlLauncher: urlLauncher,
-      ),
+      onTap: () => openDependencyMirror(context, pkg, urlLauncher: urlLauncher),
     );
   }
 }

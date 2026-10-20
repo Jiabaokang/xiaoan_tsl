@@ -10,8 +10,8 @@ import 'model_service_provider.dart';
 // 不随页面销毁，首页和语言包列表复用同一份任务及失败信息。
 final modelDownloadsProvider =
     NotifierProvider<ModelDownloadController, Map<String, ModelDownloadStatus>>(
-  ModelDownloadController.new,
-);
+      ModelDownloadController.new,
+    );
 
 // 合并重复下载并订阅原生状态，等待过久仅提示，不伪装为底层取消。
 class ModelDownloadController
@@ -26,10 +26,10 @@ class ModelDownloadController
     final source = _models;
     final subscription = source is ModelDownloadEventSource
         ? (source as ModelDownloadEventSource).downloadEvents.listen(
-              _onUpdate,
-              // 下载结果由方法调用决定，事件通道错误不能冒充下载失败。
-              onError: (Object _) {},
-            )
+            _onUpdate,
+            // 下载结果由方法调用决定，事件通道错误不能冒充下载失败。
+            onError: (Object _) {},
+          )
         : null;
     ref.onDispose(() {
       unawaited(subscription?.cancel());
@@ -49,7 +49,7 @@ class ModelDownloadController
       code: ModelDownloadStatus(
         code: code,
         phase: ModelDownloadPhase.preparing,
-      )
+      ),
     };
     _armSlowNotice(code);
     final future = _download(code, wifiOnly: wifiOnly);
@@ -73,14 +73,16 @@ class ModelDownloadController
             code: code,
             phase: ModelDownloadPhase.completed,
             progress: 1,
-          )
+          ),
         };
       }
     } catch (error) {
       final failure = error is ModelDownloadException
           ? error
           : ModelDownloadException(
-              ModelDownloadFailure.unknown, error.toString());
+              ModelDownloadFailure.unknown,
+              error.toString(),
+            );
       if (ref.mounted) {
         state = {
           ...state,
@@ -88,7 +90,7 @@ class ModelDownloadController
             code: code,
             phase: ModelDownloadPhase.failed,
             error: failure,
-          )
+          ),
         };
       }
       throw failure;
@@ -131,7 +133,7 @@ class ModelDownloadController
         isSlow: progress == previous.progress && update.phase == previous.phase
             ? previous.isSlow
             : false,
-      )
+      ),
     };
     if (progress != previous.progress || update.phase != previous.phase) {
       _armSlowNotice(update.code);
@@ -156,7 +158,7 @@ class ModelDownloadController
           progress: current.progress,
           canUseMobile: current.canUseMobile,
           isSlow: true,
-        )
+        ),
       };
     });
   }

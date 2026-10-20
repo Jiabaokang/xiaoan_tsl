@@ -68,8 +68,7 @@ class _Translator implements TranslationService {
     required String text,
     required String sourceLanguage,
     required String targetLanguage,
-  }) async =>
-      '真实译文';
+  }) async => '真实译文';
 }
 
 // 在线服务替身：不检查模型，结果引擎为 baidu。
@@ -85,8 +84,7 @@ class _OnlineTranslator implements TranslationService {
     required String text,
     required String sourceLanguage,
     required String targetLanguage,
-  }) async =>
-      '在线译文';
+  }) async => '在线译文';
 }
 
 // 延迟完成的在线服务，用于验证服务切换后旧结果失效。
@@ -104,8 +102,7 @@ class _DeferredOnlineTranslator implements TranslationService {
     required String text,
     required String sourceLanguage,
     required String targetLanguage,
-  }) =>
-      completer.future;
+  }) => completer.future;
 }
 
 void main() {
@@ -165,14 +162,18 @@ void main() {
     controller.setInput('Hello, world!');
     await controller.translate();
 
-    expect(container.read(appControllerProvider).phase,
-        TranslationPhase.modelDownloadRequired);
+    expect(
+      container.read(appControllerProvider).phase,
+      TranslationPhase.modelDownloadRequired,
+    );
     expect(models.downloads, isEmpty);
     expect(await store.search(''), isEmpty);
 
     await controller.translate(downloadMissing: true);
     expect(
-        container.read(appControllerProvider).phase, TranslationPhase.success);
+      container.read(appControllerProvider).phase,
+      TranslationPhase.success,
+    );
     expect(models.downloads, ['en', 'zh']);
   });
 

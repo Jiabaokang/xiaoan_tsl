@@ -32,6 +32,7 @@
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		D0A100000000000000000002 /* MacDesktopBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A100000000000000000001 /* MacDesktopBridge.swift */; };
 		D0A100000000000000000004 /* ScreenCaptureCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A100000000000000000003 /* ScreenCaptureCoordinator.swift */; };
+		D0A100000000000000000006 /* OverlayResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A100000000000000000005 /* OverlayResultView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,6 +93,7 @@
 		AB0C19A6ABB929ECDDE4507B /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0A100000000000000000001 /* MacDesktopBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacDesktopBridge.swift; sourceTree = "<group>"; };
 		D0A100000000000000000003 /* ScreenCaptureCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureCoordinator.swift; sourceTree = "<group>"; };
+		D0A100000000000000000005 /* OverlayResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayResultView.swift; sourceTree = "<group>"; };
 		E61DFEC13E9BA7CE8D488405 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6EC6E675273ED31E5A56ADE /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -187,6 +189,7 @@
 				33CC11122044BFA00003C045 /* MainFlutterWindow.swift */,
 				D0A100000000000000000001 /* MacDesktopBridge.swift */,
 				D0A100000000000000000003 /* ScreenCaptureCoordinator.swift */,
+				D0A100000000000000000005 /* OverlayResultView.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -458,6 +461,7 @@
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 				D0A100000000000000000002 /* MacDesktopBridge.swift in Sources */,
 				D0A100000000000000000004 /* ScreenCaptureCoordinator.swift in Sources */,
+				D0A100000000000000000006 /* OverlayResultView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

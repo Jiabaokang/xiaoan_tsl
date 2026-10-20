@@ -131,29 +131,28 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
   Future<void> _confirmModelDownload() async {
     final wifiOnly = await confirmModelDownload(context);
     if (wifiOnly != null && mounted) {
-      await ref.read(appControllerProvider.notifier).translate(
-            downloadMissing: true,
-            wifiOnly: wifiOnly,
-          );
+      await ref
+          .read(appControllerProvider.notifier)
+          .translate(downloadMissing: true, wifiOnly: wifiOnly);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(
-      appControllerProvider.select((state) => state.phase),
-      (previous, next) {
-        if (next == TranslationPhase.modelDownloadRequired) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted &&
-                ref.read(appControllerProvider).phase ==
-                    TranslationPhase.modelDownloadRequired) {
-              _confirmModelDownload();
-            }
-          });
-        }
-      },
-    );
+    ref.listen(appControllerProvider.select((state) => state.phase), (
+      previous,
+      next,
+    ) {
+      if (next == TranslationPhase.modelDownloadRequired) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted &&
+              ref.read(appControllerProvider).phase ==
+                  TranslationPhase.modelDownloadRequired) {
+            _confirmModelDownload();
+          }
+        });
+      }
+    });
     ref.listen(
       appControllerProvider.select(
         (state) => (state.sourceLanguage, state.targetLanguage),
@@ -179,7 +178,8 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
     final controller = ref.read(appControllerProvider.notifier);
     final theme = Theme.of(context);
     final l10n = context.l10n;
-    final reversed = state.sourceLanguage != 'auto' &&
+    final reversed =
+        state.sourceLanguage != 'auto' &&
         state.detectedLanguage == state.targetLanguage;
 
     return Scaffold(
@@ -200,8 +200,10 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
               ),
             ),
             const SizedBox(width: 9),
-            Text(l10n.appName,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              l10n.appName,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ],
         ),
       ),
@@ -306,14 +308,14 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                               onPressed: _speaking
                                   ? _stopSpeech
                                   : state.input.trim().isEmpty
-                                      ? null
-                                      : () => _speak(
-                                            state.input,
-                                            state.detectedLanguage ??
-                                                (state.sourceLanguage == 'auto'
-                                                    ? null
-                                                    : state.sourceLanguage),
-                                          ),
+                                  ? null
+                                  : () => _speak(
+                                      state.input,
+                                      state.detectedLanguage ??
+                                          (state.sourceLanguage == 'auto'
+                                              ? null
+                                              : state.sourceLanguage),
+                                    ),
                             ),
                             IconButton(
                               tooltip: l10n.clearInputTooltip,
@@ -330,13 +332,14 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
             ),
             const SizedBox(height: 13),
             FilledButton.icon(
-              onPressed: state.input.trim().isEmpty ||
+              onPressed:
+                  state.input.trim().isEmpty ||
                       state.phase.isBusy ||
                       !state.loaded
                   ? null
                   : state.phase == TranslationPhase.modelDownloadRequired
-                      ? _confirmModelDownload
-                      : controller.translate,
+                  ? _confirmModelDownload
+                  : controller.translate,
               icon: state.phase.isBusy
                   ? const SizedBox(
                       width: 18,
@@ -348,10 +351,10 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                 state.phase == TranslationPhase.modelDownloadRequired
                     ? l10n.modelDownloadRequired
                     : state.phase.isBusy
-                        ? state.localizedMessage(l10n)
-                        : state.phase == TranslationPhase.success
-                            ? l10n.translateAgain
-                            : l10n.startTranslation,
+                    ? state.localizedMessage(l10n)
+                    : state.phase == TranslationPhase.success
+                    ? l10n.translateAgain
+                    : l10n.startTranslation,
               ),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(51),
@@ -360,23 +363,27 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
             if ((state.phase == TranslationPhase.downloadingModel ||
                     state.failure == TranslationFailure.modelDownload) &&
                 state.downloadingModelCode != null)
-              Consumer(builder: (context, ref, child) {
-                final download = ref
-                    .watch(modelDownloadsProvider)[state.downloadingModelCode];
-                if (download == null) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                          '${l10n.languageName(download.code)} · ${l10n.modelDownloadStep(state.modelDownloadIndex + 1, state.modelDownloadCodes.length)}'),
-                      const SizedBox(height: 8),
-                      ModelDownloadProgress(status: download),
-                    ],
-                  ),
-                );
-              }),
+              Consumer(
+                builder: (context, ref, child) {
+                  final download = ref.watch(
+                    modelDownloadsProvider,
+                  )[state.downloadingModelCode];
+                  if (download == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${l10n.languageName(download.code)} · ${l10n.modelDownloadStep(state.modelDownloadIndex + 1, state.modelDownloadCodes.length)}',
+                        ),
+                        const SizedBox(height: 8),
+                        ModelDownloadProgress(status: download),
+                      ],
+                    ),
+                  );
+                },
+              ),
             if (state.phase == TranslationPhase.error &&
                 state.failure != TranslationFailure.unsupportedLanguage &&
                 state.failure != TranslationFailure.detection &&
@@ -438,15 +445,12 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                       ),
                     ),
                     if (state.result != null)
-                      Text(
-                        switch (state.result!.engine) {
-                          'demo' => l10n.demoDisclaimer,
-                          'baidu' => l10n.baiduDisclaimer,
-                          'apple' => l10n.appleDisclaimer,
-                          _ => l10n.googleDisclaimer,
-                        },
-                        style: theme.textTheme.labelSmall,
-                      ),
+                      Text(switch (state.result!.engine) {
+                        'demo' => l10n.demoDisclaimer,
+                        'baidu' => l10n.baiduDisclaimer,
+                        'apple' => l10n.appleDisclaimer,
+                        _ => l10n.googleDisclaimer,
+                      }, style: theme.textTheme.labelSmall),
                     Divider(color: theme.colorScheme.outlineVariant),
                     Row(
                       children: [
@@ -468,11 +472,11 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                           onPressed: _speaking
                               ? _stopSpeech
                               : state.result == null
-                                  ? null
-                                  : () => _speak(
-                                        state.result!.translatedText,
-                                        state.result!.targetLanguage,
-                                      ),
+                              ? null
+                              : () => _speak(
+                                  state.result!.translatedText,
+                                  state.result!.targetLanguage,
+                                ),
                         ),
                         IconButton(
                           tooltip: state.result?.favorite == true

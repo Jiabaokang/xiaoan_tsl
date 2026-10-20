@@ -36,9 +36,9 @@ void main() {
   late ProviderContainer container;
   setUp(() {
     models = _Models();
-    container = ProviderContainer(overrides: [
-      translationModelProvider.overrideWithValue(models),
-    ]);
+    container = ProviderContainer(
+      overrides: [translationModelProvider.overrideWithValue(models)],
+    );
   });
   tearDown(() async {
     container.dispose();
@@ -50,48 +50,60 @@ void main() {
     final first = controller.download('ja');
     final second = controller.download('ja');
     expect(models.starts, 1);
-    models.events.add(const ModelDownloadStatus(
-      code: 'ja',
-      phase: ModelDownloadPhase.downloading,
-      progress: 1,
-    ));
+    models.events.add(
+      const ModelDownloadStatus(
+        code: 'ja',
+        phase: ModelDownloadPhase.downloading,
+        progress: 1,
+      ),
+    );
     expect(container.read(modelDownloadsProvider)['ja']!.progress, .99);
     expect(container.read(modelDownloadsProvider)['ja']!.isActive, isTrue);
     models.downloaded.add('ja');
     models.gate.complete();
     await Future.wait([first, second]);
-    expect(container.read(modelDownloadsProvider)['ja']!.phase,
-        ModelDownloadPhase.completed);
+    expect(
+      container.read(modelDownloadsProvider)['ja']!.phase,
+      ModelDownloadPhase.completed,
+    );
   });
 
   test('原生下载完成但设备没有模型时显示失败而非已下载', () async {
-    final pending =
-        container.read(modelDownloadsProvider.notifier).download('ja');
-    final assertion =
-        expectLater(pending, throwsA(isA<ModelDownloadException>()));
+    final pending = container
+        .read(modelDownloadsProvider.notifier)
+        .download('ja');
+    final assertion = expectLater(
+      pending,
+      throwsA(isA<ModelDownloadException>()),
+    );
     models.gate.complete();
     await assertion;
-    expect(container.read(modelDownloadsProvider)['ja']!.phase,
-        ModelDownloadPhase.failed);
+    expect(
+      container.read(modelDownloadsProvider)['ja']!.phase,
+      ModelDownloadPhase.failed,
+    );
   });
 
   test('等待Wi-Fi可切换本次网络策略，失败保留原始诊断', () async {
     final controller = container.read(modelDownloadsProvider.notifier);
     final pending = controller.download('ja');
-    models.events.add(const ModelDownloadStatus(
-      code: 'ja',
-      phase: ModelDownloadPhase.waitingWifi,
-      canUseMobile: true,
-    ));
+    models.events.add(
+      const ModelDownloadStatus(
+        code: 'ja',
+        phase: ModelDownloadPhase.waitingWifi,
+        canUseMobile: true,
+      ),
+    );
     await controller.allowMobileData('ja');
     expect(models.mobileCode, 'ja');
     const detail = 'MLKit error 101: disk full';
-    final assertion =
-        expectLater(pending, throwsA(isA<ModelDownloadException>()));
-    models.gate.completeError(ModelDownloadException(
-      ModelDownloadFailure.storage,
-      detail,
-    ));
+    final assertion = expectLater(
+      pending,
+      throwsA(isA<ModelDownloadException>()),
+    );
+    models.gate.completeError(
+      ModelDownloadException(ModelDownloadFailure.storage, detail),
+    );
     await assertion;
     final status = container.read(modelDownloadsProvider)['ja']!;
     expect(status.error!.failure, ModelDownloadFailure.storage);
@@ -101,13 +113,16 @@ void main() {
 
   test('无有效进度时不伪造百分比，离开消费者不丢失任务', () async {
     final subscription = container.listen(modelDownloadsProvider, (_, _) {});
-    final pending =
-        container.read(modelDownloadsProvider.notifier).download('ja');
-    models.events.add(const ModelDownloadStatus(
-      code: 'ja',
-      phase: ModelDownloadPhase.downloading,
-      progress: double.nan,
-    ));
+    final pending = container
+        .read(modelDownloadsProvider.notifier)
+        .download('ja');
+    models.events.add(
+      const ModelDownloadStatus(
+        code: 'ja',
+        phase: ModelDownloadPhase.downloading,
+        progress: double.nan,
+      ),
+    );
     subscription.close();
     await pumpEventQueue();
     expect(container.read(modelDownloadsProvider)['ja']!.progress, isNull);

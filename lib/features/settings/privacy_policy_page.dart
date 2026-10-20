@@ -11,8 +11,8 @@ const privacyPolicyUrlEn = 'https://jbksy.cn/xiaoan-privacy-en.html';
 /// 按应用界面语言选择对应的公开政策页面。
 String privacyPolicyUrlFor(BuildContext context) =>
     Localizations.localeOf(context).languageCode == 'en'
-        ? privacyPolicyUrlEn
-        : privacyPolicyUrl;
+    ? privacyPolicyUrlEn
+    : privacyPolicyUrl;
 
 /// 打开在线完整隐私政策网页。
 ///
@@ -32,9 +32,9 @@ Future<void> openPrivacyPolicyUrl(
     // 调起异常或无浏览器环境时的容错处理。
   }
   if (context.mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.cannotOpenUrlNotice)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.cannotOpenUrlNotice)));
   }
 }
 
@@ -45,10 +45,7 @@ Future<void> openPrivacyPolicyUrl(
 /// 2. 五大核心板块：数据存储边界、离线模型推理、语音与分享安全、权限最小化及诊断数据；
 /// 3. 底部完整在线隐私政策外链入口。
 class PrivacyPolicyPage extends StatelessWidget {
-  const PrivacyPolicyPage({
-    super.key,
-    this.urlLauncher,
-  });
+  const PrivacyPolicyPage({super.key, this.urlLauncher});
 
   /// 外部链接打开器，默认调用 [launchUrl]，方便单元测试模拟跳转。
   final Future<bool> Function(Uri url, {LaunchMode mode})? urlLauncher;
@@ -58,9 +55,7 @@ class PrivacyPolicyPage extends StatelessWidget {
     final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.privacyPolicyLabel),
-      ),
+      appBar: AppBar(title: Text(l10n.privacyPolicyLabel)),
       body: SingleChildScrollView(
         // 滚动留白叠加系统边衬，避免末项和横屏内容被系统区域遮挡。
         padding:
@@ -104,9 +99,7 @@ class PrivacyPolicyPage extends StatelessWidget {
               content: l10n.privacySection5Content,
             ),
             const SizedBox(height: 16),
-            _PrivacyExternalLinkCard(
-              urlLauncher: urlLauncher,
-            ),
+            _PrivacyExternalLinkCard(urlLauncher: urlLauncher),
             const SizedBox(height: 24),
           ],
         ),
@@ -225,11 +218,7 @@ class _PrivacySectionCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: scheme.primary,
-                  ),
+                  child: Icon(icon, size: 20, color: scheme.primary),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -259,9 +248,7 @@ class _PrivacySectionCard extends StatelessWidget {
 
 /// 底部外部完整隐私政策链接卡片。
 class _PrivacyExternalLinkCard extends StatelessWidget {
-  const _PrivacyExternalLinkCard({
-    this.urlLauncher,
-  });
+  const _PrivacyExternalLinkCard({this.urlLauncher});
 
   /// 外部链接打开器。
   final Future<bool> Function(Uri url, {LaunchMode mode})? urlLauncher;
@@ -280,10 +267,8 @@ class _PrivacyExternalLinkCard extends StatelessWidget {
           children: [
             InkWell(
               borderRadius: BorderRadius.circular(8),
-              onTap: () => openPrivacyPolicyUrl(
-                context,
-                urlLauncher: urlLauncher,
-              ),
+              onTap: () =>
+                  openPrivacyPolicyUrl(context, urlLauncher: urlLauncher),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
@@ -309,10 +294,8 @@ class _PrivacyExternalLinkCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             FilledButton.icon(
-              onPressed: () => openPrivacyPolicyUrl(
-                context,
-                urlLauncher: urlLauncher,
-              ),
+              onPressed: () =>
+                  openPrivacyPolicyUrl(context, urlLauncher: urlLauncher),
               icon: const Icon(Icons.open_in_new, size: 18),
               label: Text(l10n.viewFullPrivacyPolicy),
             ),

@@ -284,7 +284,9 @@ void main() {
     expect(find.text('Diagnostic Data & Third-Party Notice'), findsOneWidget);
     expect(find.text('View Complete Online Privacy Policy'), findsOneWidget);
     expect(
-        find.text('https://jbksy.cn/xiaoan-privacy-en.html'), findsOneWidget);
+      find.text('https://jbksy.cn/xiaoan-privacy-en.html'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('PrivacyPolicyPage 英文界面打开英文政策网页', (tester) async {
@@ -337,10 +339,7 @@ void main() {
     await tester.tap(button);
     await tester.pumpAndSettle();
 
-    expect(
-      launchedUri.toString(),
-      'https://jbksy.cn/xiaoan-privacy.html',
-    );
+    expect(launchedUri.toString(), 'https://jbksy.cn/xiaoan-privacy.html');
     expect(launchMode, LaunchMode.externalApplication);
   });
 
@@ -367,10 +366,7 @@ void main() {
     await tester.tap(urlText);
     await tester.pumpAndSettle();
 
-    expect(
-      launchedUri.toString(),
-      'https://jbksy.cn/xiaoan-privacy.html',
-    );
+    expect(launchedUri.toString(), 'https://jbksy.cn/xiaoan-privacy.html');
   });
 
   testWidgets('PrivacyPolicyPage 打开外链失败时显示错误提示 SnackBar', (tester) async {
@@ -483,9 +479,7 @@ void main() {
         locale: const Locale('zh'),
         localizationsDelegates: _testLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: AboutPage(
-          packageInfoFuture: Future.value(mockInfo),
-        ),
+        home: AboutPage(packageInfoFuture: Future.value(mockInfo)),
       ),
     );
     await tester.pumpAndSettle();
@@ -530,9 +524,7 @@ void main() {
         locale: const Locale('zh'),
         localizationsDelegates: _testLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: AboutPage(
-          onNavigateToDependencies: () => navigated = true,
-        ),
+        home: AboutPage(onNavigateToDependencies: () => navigated = true),
       ),
     );
     await tester.pumpAndSettle();
@@ -552,9 +544,7 @@ void main() {
         locale: const Locale('zh'),
         localizationsDelegates: _testLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: AboutPage(
-          onNavigateToPrivacy: () => navigated = true,
-        ),
+        home: AboutPage(onNavigateToPrivacy: () => navigated = true),
       ),
     );
     await tester.pumpAndSettle();
@@ -602,9 +592,7 @@ void main() {
     expect(find.text('生效日期：2026年9月'), findsOneWidget);
   });
 
-  testWidgets('InfoPage 兼容层以 InfoKind.about 构造转发至 AboutPage', (
-    tester,
-  ) async {
+  testWidgets('InfoPage 兼容层以 InfoKind.about 构造转发至 AboutPage', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
         locale: Locale('zh'),

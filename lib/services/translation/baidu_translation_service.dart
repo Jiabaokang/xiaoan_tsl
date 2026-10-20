@@ -55,8 +55,7 @@ class BaiduTranslationService implements TranslationService {
     this.saltFactory,
   });
 
-  static const endpoint =
-      'https://fanyi-api.baidu.com/api/trans/vip/translate';
+  static const endpoint = 'https://fanyi-api.baidu.com/api/trans/vip/translate';
 
   // 当前应用语言代码到百度官方语言代码的映射。
   static const _languageCodes = <String, String>{
@@ -99,10 +98,7 @@ class BaiduTranslationService implements TranslationService {
   }) async {
     final appId = await credentials.readBaiduAppId();
     final secret = await credentials.readBaiduSecret();
-    if (appId == null ||
-        appId.isEmpty ||
-        secret == null ||
-        secret.isEmpty) {
+    if (appId == null || appId.isEmpty || secret == null || secret.isEmpty) {
       throw const BaiduConfigException('缺少百度翻译凭据，请先在设置中填写');
     }
     final from = baiduLanguageCode(sourceLanguage);
@@ -116,8 +112,7 @@ class BaiduTranslationService implements TranslationService {
     }
     final salt = (saltFactory?.call() ?? _random.nextInt(1 << 32)).toString();
     // 先对未编码原文签名，再由 Dio 做表单编码。
-    final sign =
-        md5.convert(utf8.encode('$appId$text$salt$secret')).toString();
+    final sign = md5.convert(utf8.encode('$appId$text$salt$secret')).toString();
     try {
       final response = await dio.post<Map<String, dynamic>>(
         endpoint,
@@ -166,9 +161,10 @@ class BaiduTranslationService implements TranslationService {
   BaiduTranslationException _throwByErrorCode(String code, String? message) {
     final detail = message == null || message.isEmpty ? '错误码 $code' : message;
     final exception = switch (code) {
-      '52003' || '54001' || '58000' || '90107' => BaiduAuthException(
-          '百度认证失败：$detail',
-        ),
+      '52003' ||
+      '54001' ||
+      '58000' ||
+      '90107' => BaiduAuthException('百度认证失败：$detail'),
       '54003' || '54005' => BaiduRateLimitException('百度请求过于频繁：$detail'),
       '54004' => BaiduQuotaException('百度账户额度不足：$detail'),
       '52001' => BaiduNetworkException('百度请求超时：$detail'),

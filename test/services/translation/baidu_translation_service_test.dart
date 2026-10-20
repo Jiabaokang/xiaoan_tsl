@@ -65,7 +65,10 @@ class _FakeCredentials implements SecureCredentialStore {
 
   @override
   Future<bool> hasBaiduCredentials() async =>
-      appId != null && appId!.isNotEmpty && secret != null && secret!.isNotEmpty;
+      appId != null &&
+      appId!.isNotEmpty &&
+      secret != null &&
+      secret!.isNotEmpty;
 
   @override
   Future<void> writeBaiduCredentials({
@@ -108,7 +111,10 @@ void main() {
       }),
     );
     dio = Dio()..httpClientAdapter = adapter;
-    credentials = _FakeCredentials(appId: '2015063000000001', secret: '12345678');
+    credentials = _FakeCredentials(
+      appId: '2015063000000001',
+      secret: '12345678',
+    );
     service = BaiduTranslationService(
       credentials: credentials,
       dio: dio,
@@ -259,10 +265,7 @@ void main() {
     };
     for (final entry in cases.entries) {
       adapter = _RecordingAdapter(
-        (_) async => jsonBody({
-          'error_code': entry.key,
-          'error_msg': '测试错误',
-        }),
+        (_) async => jsonBody({'error_code': entry.key, 'error_msg': '测试错误'}),
       );
       dio = Dio()..httpClientAdapter = adapter;
       service = BaiduTranslationService(
@@ -276,11 +279,13 @@ void main() {
           sourceLanguage: 'en',
           targetLanguage: 'zh',
         ),
-        throwsA(isA<BaiduTranslationException>().having(
-          (e) => e.runtimeType,
-          'type',
-          entry.value,
-        )),
+        throwsA(
+          isA<BaiduTranslationException>().having(
+            (e) => e.runtimeType,
+            'type',
+            entry.value,
+          ),
+        ),
       );
     }
   });

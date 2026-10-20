@@ -9,7 +9,11 @@ import 'screenshot_controller.dart';
 
 // 截图翻译结果页：截图在上、中文译文在下；Esc 与关闭释放截图内存。
 class ScreenshotResultPage extends ConsumerStatefulWidget {
-  const ScreenshotResultPage({super.key, this.desktopWindow = false, this.onConfigure});
+  const ScreenshotResultPage({
+    super.key,
+    this.desktopWindow = false,
+    this.onConfigure,
+  });
 
   // 独立桌面窗口由应用事件桥关闭，不操作主窗口的导航栈。
   final bool desktopWindow;
@@ -28,7 +32,8 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
     final l10n = context.l10n;
     // 服务切换或外部关闭把会话置回 idle 时关闭本页。
     ref.listen(screenshotControllerProvider, (previous, next) {
-      if (!widget.desktopWindow && next.stage == ScreenshotStage.idle &&
+      if (!widget.desktopWindow &&
+          next.stage == ScreenshotStage.idle &&
           previous?.stage != ScreenshotStage.idle) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted && Navigator.of(context).canPop()) {
@@ -49,7 +54,9 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
             tooltip: l10n.screenshotClose,
             onPressed: () {
               ref.read(screenshotControllerProvider.notifier).dismiss();
-              if (!widget.desktopWindow && mounted && Navigator.of(context).canPop()) {
+              if (!widget.desktopWindow &&
+                  mounted &&
+                  Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
             },
@@ -62,7 +69,9 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
           if (event is KeyDownEvent &&
               event.logicalKey == LogicalKeyboardKey.escape) {
             ref.read(screenshotControllerProvider.notifier).dismiss();
-            if (!widget.desktopWindow && mounted && Navigator.of(context).canPop()) {
+            if (!widget.desktopWindow &&
+                mounted &&
+                Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
             }
             return KeyEventResult.handled;
@@ -83,12 +92,18 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
       case ScreenshotStage.ocr:
         return _CenteredProgress(l10n.screenshotRecognizing);
       case ScreenshotStage.translating:
-        return _content(state, l10n,
-            progress: _CenteredProgress(l10n.screenshotTranslating));
+        return _content(
+          state,
+          l10n,
+          progress: _CenteredProgress(l10n.screenshotTranslating),
+        );
       case ScreenshotStage.needsConfirm:
         if (!state.confirmRequired) {
-          return _content(state, l10n,
-              progress: _CenteredProgress(l10n.screenshotJudgingLanguage));
+          return _content(
+            state,
+            l10n,
+            progress: _CenteredProgress(l10n.screenshotJudgingLanguage),
+          );
         }
         return _content(
           state,
@@ -231,8 +246,10 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
           ),
         if (state.pngBytes != null) const SizedBox(height: 16),
         if (state.recognizedText != null) ...[
-          Text(l10n.screenshotOriginalLabel,
-              style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            l10n.screenshotOriginalLabel,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
           const SizedBox(height: 4),
           SelectableText(
             state.recognizedText!,
@@ -242,18 +259,17 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
         ],
         ?progress,
         if (state.translatedText != null) ...[
-          Text(l10n.screenshotTranslatedLabel,
-              style: Theme.of(context).textTheme.labelMedium),
+          Text(
+            l10n.screenshotTranslatedLabel,
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
           const SizedBox(height: 4),
           SelectableText(
             state.translatedText!,
             key: const Key('screenshotTranslatedText'),
           ),
         ],
-        if (footer != null) ...[
-          const SizedBox(height: 16),
-          footer,
-        ],
+        if (footer != null) ...[const SizedBox(height: 16), footer],
       ],
     );
   }
@@ -277,8 +293,9 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
   Future<void> _copy(String text) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(context.l10n.screenshotCopied)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.l10n.screenshotCopied)));
   }
 }
 

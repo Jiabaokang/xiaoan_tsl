@@ -7,6 +7,10 @@ class AssetsRes {
   AssetsRes._();
 
   static const String PROJECT_NAME = 'xiaoan_tsl';
-  static const String PROJECT_VERSION = '1.0.0+1';
+  static const String PROJECT_VERSION = '1.0.5+5';
   static const String APP_ICON_128 = 'assets/branding/app_icon_128.png';
+  static const String SPLASH_BRANDING = 'assets/branding/splash_branding.png';
+  static const String SPLASH_BRANDING_DARK =
+      'assets/branding/splash_branding_dark.png';
+  static const String SPLASH_ICON = 'assets/branding/splash_icon.png';
 }

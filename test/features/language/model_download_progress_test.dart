@@ -39,21 +39,23 @@ void main() {
     testWidgets('$brightness：确认可取消、等待网络无百分比、失败原因可见且可重试', (tester) async {
       final models = _Models();
       addTearDown(models.events.close);
-      await tester.pumpWidget(ProviderScope(
-        overrides: [translationModelProvider.overrideWithValue(models)],
-        child: MaterialApp(
-          locale: const Locale('zh'),
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: ThemeData(brightness: brightness),
-          home: const OfflineModelsPage(),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [translationModelProvider.overrideWithValue(models)],
+          child: MaterialApp(
+            locale: const Locale('zh'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: ThemeData(brightness: brightness),
+            home: const OfflineModelsPage(),
+          ),
         ),
-      ));
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('download_zh')));
       await tester.pumpAndSettle();
@@ -67,27 +69,33 @@ void main() {
       await tester.tap(find.text('仅 Wi-Fi 下载'));
       await tester.pump();
       expect(models.policies, [true]);
-      models.events.add(const ModelDownloadStatus(
-        code: 'zh',
-        phase: ModelDownloadPhase.waitingWifi,
-        canUseMobile: true,
-      ));
+      models.events.add(
+        const ModelDownloadStatus(
+          code: 'zh',
+          phase: ModelDownloadPhase.waitingWifi,
+          canUseMobile: true,
+        ),
+      );
       await tester.pump();
       await tester.pumpAndSettle();
       expect(find.text('等待 Wi-Fi 连接'), findsOneWidget);
       expect(find.textContaining('%'), findsNothing);
       expect(find.text('允许移动网络下载'), findsOneWidget);
-      models.events.add(const ModelDownloadStatus(
-        code: 'zh',
-        phase: ModelDownloadPhase.downloading,
-        progress: .42,
-      ));
+      models.events.add(
+        const ModelDownloadStatus(
+          code: 'zh',
+          phase: ModelDownloadPhase.downloading,
+          progress: .42,
+        ),
+      );
       await tester.pump();
       expect(find.textContaining('42%'), findsOneWidget);
-      models.gate.completeError(ModelDownloadException(
-        ModelDownloadFailure.storage,
-        'native storage error 101',
-      ));
+      models.gate.completeError(
+        ModelDownloadException(
+          ModelDownloadFailure.storage,
+          'native storage error 101',
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.textContaining('设备存储空间不足'), findsOneWidget);
       await tester.tap(find.text('查看错误详情'));

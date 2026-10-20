@@ -180,13 +180,13 @@ final class MacDesktopBridge: NSObject {
         width: arguments["width"] as? Double ?? 0,
         height: arguments["height"] as? Double ?? 0
       )
-      mainWindow?.showResultWindow(displayId: displayId, selection: selection)
+      mainWindow?.showOverlayPanel(displayId: displayId, selection: selection)
       result(nil)
     case methodCancel:
       cancelCapture()
       result(nil)
     case "updateResult":
-      mainWindow?.updateResult(arguments)
+      mainWindow?.updateOverlayResult(arguments)
       result(nil)
     case methodUpdateShortcut:
       let shortcut = arguments["shortcut"] as? String ?? ""

@@ -24,9 +24,9 @@ enum TranslationPhase {
   error;
 
   bool get isBusy => switch (this) {
-        detecting || checkingModel || downloadingModel || translating => true,
-        _ => false,
-      };
+    detecting || checkingModel || downloadingModel || translating => true,
+    _ => false,
+  };
 }
 
 // 失败类型用于显示针对性的恢复操作。
@@ -82,43 +82,44 @@ class AppState {
 
   String? get downloadingModelCode =>
       modelDownloadIndex < modelDownloadCodes.length
-          ? modelDownloadCodes[modelDownloadIndex]
-          : null;
+      ? modelDownloadCodes[modelDownloadIndex]
+      : null;
 
   // 根据当前 localeMode 获取 Flutter 实体 Locale（null 代表跟随系统）。
   Locale? get locale => switch (localeMode) {
-        'zh' => const Locale('zh'),
-        'en' => const Locale('en'),
-        _ => null,
-      };
+    'zh' => const Locale('zh'),
+    'en' => const Locale('en'),
+    _ => null,
+  };
 
   // 根据当前国际化上下文返回对应的阶段或错误文案。
   String localizedMessage(AppLocalizations l10n) => switch (phase) {
-        TranslationPhase.idle => l10n.phaseReady,
-        TranslationPhase.detecting => l10n.phaseDetecting,
-        TranslationPhase.checkingModel => l10n.phaseCheckingModel,
-        TranslationPhase.modelDownloadRequired => l10n.modelDownloadRequired,
-        TranslationPhase.downloadingModel => l10n.phaseDownloadingModel,
-        TranslationPhase.translating => l10n.phaseTranslating,
-        TranslationPhase.success => l10n.phaseSuccess,
-        TranslationPhase.error => switch (failure) {
-            TranslationFailure.detection => l10n.errorDetection,
-            TranslationFailure.unsupportedLanguage => message == '最多输入 5000 个字符'
-                ? l10n.errorMaxChars
-                : (message == '请先翻译或手动选择原文语言'
-                    ? l10n.errorSwapLanguage
-                    : l10n.errorUnsupportedLang),
-            TranslationFailure.modelCheck => l10n.errorModelCheck,
-            TranslationFailure.modelDownload => l10n.modelDownloadFailure(
-                modelDownloadError?.failure.name ?? 'unknown'),
-            TranslationFailure.translation => l10n.errorTranslation,
-            TranslationFailure.config => l10n.errorConfigMissing,
-            TranslationFailure.storage => message == '无法将结果写入历史'
-                ? l10n.errorStorageSave
-                : l10n.errorStorage,
-            TranslationFailure.none => message,
-          },
-      };
+    TranslationPhase.idle => l10n.phaseReady,
+    TranslationPhase.detecting => l10n.phaseDetecting,
+    TranslationPhase.checkingModel => l10n.phaseCheckingModel,
+    TranslationPhase.modelDownloadRequired => l10n.modelDownloadRequired,
+    TranslationPhase.downloadingModel => l10n.phaseDownloadingModel,
+    TranslationPhase.translating => l10n.phaseTranslating,
+    TranslationPhase.success => l10n.phaseSuccess,
+    TranslationPhase.error => switch (failure) {
+      TranslationFailure.detection => l10n.errorDetection,
+      TranslationFailure.unsupportedLanguage =>
+        message == '最多输入 5000 个字符'
+            ? l10n.errorMaxChars
+            : (message == '请先翻译或手动选择原文语言'
+                  ? l10n.errorSwapLanguage
+                  : l10n.errorUnsupportedLang),
+      TranslationFailure.modelCheck => l10n.errorModelCheck,
+      TranslationFailure.modelDownload => l10n.modelDownloadFailure(
+        modelDownloadError?.failure.name ?? 'unknown',
+      ),
+      TranslationFailure.translation => l10n.errorTranslation,
+      TranslationFailure.config => l10n.errorConfigMissing,
+      TranslationFailure.storage =>
+        message == '无法将结果写入历史' ? l10n.errorStorageSave : l10n.errorStorage,
+      TranslationFailure.none => message,
+    },
+  };
 
   static const _unchanged = Object();
 
@@ -139,32 +140,30 @@ class AppState {
     List<String>? modelDownloadCodes,
     int? modelDownloadIndex,
     Object? modelDownloadError = _unchanged,
-  }) =>
-      AppState(
-        input: input ?? this.input,
-        sourceLanguage: sourceLanguage ?? this.sourceLanguage,
-        targetLanguage: targetLanguage ?? this.targetLanguage,
-        defaultTargetLanguage:
-            defaultTargetLanguage ?? this.defaultTargetLanguage,
-        detectedLanguage: identical(detectedLanguage, _unchanged)
-            ? this.detectedLanguage
-            : detectedLanguage as String?,
-        result: identical(result, _unchanged)
-            ? this.result
-            : result as TranslationRecord?,
-        phase: phase ?? this.phase,
-        failure: failure ?? this.failure,
-        message: message ?? this.message,
-        records: records ?? this.records,
-        themeMode: themeMode ?? this.themeMode,
-        localeMode: localeMode ?? this.localeMode,
-        loaded: loaded ?? this.loaded,
-        modelDownloadCodes: modelDownloadCodes ?? this.modelDownloadCodes,
-        modelDownloadIndex: modelDownloadIndex ?? this.modelDownloadIndex,
-        modelDownloadError: identical(modelDownloadError, _unchanged)
-            ? this.modelDownloadError
-            : modelDownloadError as ModelDownloadException?,
-      );
+  }) => AppState(
+    input: input ?? this.input,
+    sourceLanguage: sourceLanguage ?? this.sourceLanguage,
+    targetLanguage: targetLanguage ?? this.targetLanguage,
+    defaultTargetLanguage: defaultTargetLanguage ?? this.defaultTargetLanguage,
+    detectedLanguage: identical(detectedLanguage, _unchanged)
+        ? this.detectedLanguage
+        : detectedLanguage as String?,
+    result: identical(result, _unchanged)
+        ? this.result
+        : result as TranslationRecord?,
+    phase: phase ?? this.phase,
+    failure: failure ?? this.failure,
+    message: message ?? this.message,
+    records: records ?? this.records,
+    themeMode: themeMode ?? this.themeMode,
+    localeMode: localeMode ?? this.localeMode,
+    loaded: loaded ?? this.loaded,
+    modelDownloadCodes: modelDownloadCodes ?? this.modelDownloadCodes,
+    modelDownloadIndex: modelDownloadIndex ?? this.modelDownloadIndex,
+    modelDownloadError: identical(modelDownloadError, _unchanged)
+        ? this.modelDownloadError
+        : modelDownloadError as ModelDownloadException?,
+  );
 }
 
 final appControllerProvider = NotifierProvider<AppController, AppState>(
@@ -323,8 +322,10 @@ class AppController extends Notifier<AppState> {
     return true;
   }
 
-  Future<void> translate(
-      {bool downloadMissing = false, bool wifiOnly = false}) async {
+  Future<void> translate({
+    bool downloadMissing = false,
+    bool wifiOnly = false,
+  }) async {
     final text = state.input.trim();
     if (text.isEmpty || state.phase.isBusy) return;
     if (text.length > 5000) {
@@ -414,10 +415,9 @@ class AppController extends Notifier<AppState> {
             modelDownloadIndex: index,
             message: '正在准备离线翻译模型',
           );
-          await ref.read(modelDownloadsProvider.notifier).download(
-                missing[index],
-                wifiOnly: wifiOnly,
-              );
+          await ref
+              .read(modelDownloadsProvider.notifier)
+              .download(missing[index], wifiOnly: wifiOnly);
           if (!ref.mounted || request != _request) return;
         }
       }

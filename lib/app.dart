@@ -30,8 +30,10 @@ class _DesktopEventBridgeState extends ConsumerState<DesktopEventBridge> {
   void initState() {
     super.initState();
     // 非 macOS 的事件流为空，订阅不会有副作用。
-    _subscription =
-        ref.read(macosDesktopServiceProvider).events.listen(_handleEvent);
+    _subscription = ref
+        .read(macosDesktopServiceProvider)
+        .events
+        .listen(_handleEvent);
   }
 
   @override
@@ -60,33 +62,28 @@ class _DesktopEventBridgeState extends ConsumerState<DesktopEventBridge> {
     }
   }
 
-  // 结果引擎只接收展示快照，翻译、凭据和数据库始终由主引擎负责。
+  // 覆盖面板是原生渲染，只需推送业务状态，不需要 Flutter 主题/语言同步。
   void _publishResult(ScreenshotState state) {
-    final app = ref.read(appControllerProvider);
-    unawaited(ref.read(macosDesktopServiceProvider).updateResult({
-      'stage': state.stage.name,
-      'failure': state.failure.name,
-      'png': state.pngBytes,
-      'recognizedText': state.recognizedText,
-      'translatedText': state.translatedText,
-      'confirmRequired': state.confirmRequired,
-      'historySaveFailed': state.historySaveFailed,
-      'themeMode': app.themeMode.name,
-      'locale': app.locale?.languageCode,
-    }));
+    unawaited(
+      ref.read(macosDesktopServiceProvider).updateResult({
+        'stage': state.stage.name,
+        'failure': state.failure.name,
+        'png': state.pngBytes,
+        'recognizedText': state.recognizedText,
+        'translatedText': state.translatedText,
+        'confirmRequired': state.confirmRequired,
+        'historySaveFailed': state.historySaveFailed,
+      }),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
       ref.listen(
-          screenshotControllerProvider, (_, next) => _publishResult(next));
-      ref.listen(appControllerProvider, (previous, next) {
-        if (previous?.themeMode != next.themeMode ||
-            previous?.locale != next.locale) {
-          _publishResult(ref.read(screenshotControllerProvider));
-        }
-      });
+        screenshotControllerProvider,
+        (_, next) => _publishResult(next),
+      );
     }
     return widget.child;
   }

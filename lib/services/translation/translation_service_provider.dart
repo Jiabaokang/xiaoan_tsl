@@ -30,8 +30,8 @@ String defaultEngineFor(TranslationPlatform platform) =>
 // 已保存服务偏好的异步加载；空值代表尚未加载或从未设置。
 final translationEngineProvider =
     NotifierProvider<TranslationEngineNotifier, String>(
-  TranslationEngineNotifier.new,
-);
+      TranslationEngineNotifier.new,
+    );
 
 // 读取并持久化 translation_engine 设置；普通设置走 SQLite。
 class TranslationEngineNotifier extends Notifier<String> {

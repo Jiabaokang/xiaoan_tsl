@@ -12,12 +12,16 @@ Future<bool?> confirmModelDownload(BuildContext context, {String? code}) {
   return showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      title: Text(code == null
-          ? l10n.modelDownloadRequired
-          : l10n.modelDownloadTitle(l10n.languageName(code))),
-      content: Text(code == null
-          ? '${l10n.modelDownloadDialogContent}\n\n${l10n.modelDownloadNotice}'
-          : l10n.modelDownloadNotice),
+      title: Text(
+        code == null
+            ? l10n.modelDownloadRequired
+            : l10n.modelDownloadTitle(l10n.languageName(code)),
+      ),
+      content: Text(
+        code == null
+            ? '${l10n.modelDownloadDialogContent}\n\n${l10n.modelDownloadNotice}'
+            : l10n.modelDownloadNotice,
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(dialogContext),
@@ -52,9 +56,9 @@ class ModelDownloadProgress extends ConsumerWidget {
           .allowMobileData(status.code);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(context.l10n.modelDownloadFailure('unknown')),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.modelDownloadFailure('unknown'))),
+      );
     }
   }
 
@@ -75,13 +79,14 @@ class ModelDownloadProgress extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               await Clipboard.setData(
-                  ClipboardData(text: status.error!.details));
+                ClipboardData(text: status.error!.details),
+              );
               if (!dialogContext.mounted) return;
               Navigator.pop(dialogContext);
               if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(l10n.downloadDetailsCopied),
-              ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.downloadDetailsCopied)),
+              );
             },
             child: Text(l10n.copyDownloadDetails),
           ),
@@ -98,12 +103,14 @@ class ModelDownloadProgress extends ConsumerWidget {
       ModelDownloadPhase.preparing => l10n.modelPreparing,
       ModelDownloadPhase.waitingWifi => l10n.modelWaitingWifi,
       ModelDownloadPhase.waitingNetwork => l10n.modelWaitingNetwork,
-      ModelDownloadPhase.downloading => progress == null
-          ? l10n.modelDownloading
-          : '${l10n.modelDownloading} ${(progress * 100).floor()}%',
+      ModelDownloadPhase.downloading =>
+        progress == null
+            ? l10n.modelDownloading
+            : '${l10n.modelDownloading} ${(progress * 100).floor()}%',
       ModelDownloadPhase.completed => l10n.modelDownloadComplete,
-      ModelDownloadPhase.failed =>
-        l10n.modelDownloadFailure(status.error?.failure.name ?? 'unknown'),
+      ModelDownloadPhase.failed => l10n.modelDownloadFailure(
+        status.error?.failure.name ?? 'unknown',
+      ),
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,10 +118,12 @@ class ModelDownloadProgress extends ConsumerWidget {
       children: [
         Semantics(
           liveRegion: status.phase != ModelDownloadPhase.downloading,
-          child: Text(label,
-              style: status.phase == ModelDownloadPhase.failed
-                  ? TextStyle(color: Theme.of(context).colorScheme.error)
-                  : null),
+          child: Text(
+            label,
+            style: status.phase == ModelDownloadPhase.failed
+                ? TextStyle(color: Theme.of(context).colorScheme.error)
+                : null,
+          ),
         ),
         if (status.isActive &&
             status.phase != ModelDownloadPhase.waitingWifi &&

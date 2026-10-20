@@ -180,22 +180,29 @@ void main() {
     addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
     const events = EventChannel('xiaoan_tsl/macos_desktop_events');
     MockStreamHandlerEventSink? sink;
-    messenger.setMockStreamHandler(events, MockStreamHandler.inline(
-      onListen: (_, eventSink) {
-        sink = eventSink;
-      },
-    ));
+    messenger.setMockStreamHandler(
+      events,
+      MockStreamHandler.inline(
+        onListen: (_, eventSink) {
+          sink = eventSink;
+        },
+      ),
+    );
     addTearDown(() => messenger.setMockStreamHandler(events, null));
     await pumpApp(tester);
     await tester.enterText(
-        find.byKey(const Key('sourceInput')), 'Keep my draft');
+      find.byKey(const Key('sourceInput')),
+      'Keep my draft',
+    );
     sink!.success('screenshotHotkey');
     await tester.pumpAndSettle();
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byKey(const Key('sourceInput')), findsOneWidget);
     expect(container.read(appControllerProvider).input, 'Keep my draft');
-    expect(container.read(macosDesktopServiceProvider),
-        isA<MacosDesktopChannel>());
+    expect(
+      container.read(macosDesktopServiceProvider),
+      isA<MacosDesktopChannel>(),
+    );
     debugDefaultTargetPlatformOverride = null;
   });
 

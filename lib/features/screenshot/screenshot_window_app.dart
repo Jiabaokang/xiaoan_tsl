@@ -93,22 +93,22 @@ class _ScreenshotWindowAppState extends ConsumerState<ScreenshotWindowApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: appTheme(Brightness.light),
-        darkTheme: appTheme(Brightness.dark),
-        themeMode: _themeMode,
-        locale: _locale,
-        supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: ScreenshotResultPage(
-          desktopWindow: true,
-          onConfigure: () => ScreenshotWindowController.channel
-              .invokeMethod<void>('configure'),
-        ),
-      );
+    debugShowCheckedModeBanner: false,
+    theme: appTheme(Brightness.light),
+    darkTheme: appTheme(Brightness.dark),
+    themeMode: _themeMode,
+    locale: _locale,
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: ScreenshotResultPage(
+      desktopWindow: true,
+      onConfigure: () =>
+          ScreenshotWindowController.channel.invokeMethod<void>('configure'),
+    ),
+  );
 }

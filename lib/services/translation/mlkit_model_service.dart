@@ -24,24 +24,26 @@ class MlKitModelService
       .receiveBroadcastStream()
       .where((event) => event is Map && event['model'] is String)
       .map((event) {
-    final data = event as Map;
-    return ModelDownloadStatus(
-      code: data['model'] as String,
-      phase: ModelDownloadPhase.values.firstWhere(
-        (phase) => phase.name == data['phase'],
-        orElse: () => ModelDownloadPhase.preparing,
-      ),
-      progress:
-          data['progress'] is num ? (data['progress'] as num).toDouble() : null,
-      canUseMobile: data['canUseMobile'] == true,
-    );
-  });
+        final data = event as Map;
+        return ModelDownloadStatus(
+          code: data['model'] as String,
+          phase: ModelDownloadPhase.values.firstWhere(
+            (phase) => phase.name == data['phase'],
+            orElse: () => ModelDownloadPhase.preparing,
+          ),
+          progress: data['progress'] is num
+              ? (data['progress'] as num).toDouble()
+              : null,
+          canUseMobile: data['canUseMobile'] == true,
+        );
+      });
 
   @override
   Future<void> allowMobileData(String code) async {
     try {
-      await _downloads
-          .invokeMethod<void>('allowMobileData', {'model': _modelCode(code)});
+      await _downloads.invokeMethod<void>('allowMobileData', {
+        'model': _modelCode(code),
+      });
     } on PlatformException catch (error) {
       throw ModelDownloadException.fromPlatform(error);
     }
@@ -74,7 +76,9 @@ class MlKitModelService
       });
       if (result != 'success' && result != true) {
         throw ModelDownloadException(
-            ModelDownloadFailure.unknown, '语言模型下载失败: $result');
+          ModelDownloadFailure.unknown,
+          '语言模型下载失败: $result',
+        );
       }
     } on PlatformException catch (error) {
       throw ModelDownloadException.fromPlatform(error);

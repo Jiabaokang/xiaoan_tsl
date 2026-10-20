@@ -22,11 +22,18 @@ fvm_ohos install 3.27.5-ohos-1.0.0
 
 如使用自定义 FVM 缓存目录，两种安装命令应使用同一个 `FVM_CACHE_PATH`。安装 SDK 不会自动为本仓库固定版本；当前仓库没有 `.fvmrc`。
 
-### Android 打包与覆盖安装
+### Android 构建、测试包与生产包
+
+测试包（Debug APK，真机覆盖安装）：
 
 ```sh
 flutter build apk --debug
 adb install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
+生产包：
+
+```sh
 flutter build apk --release
 adb install -r build/app/outputs/flutter-apk/app-release.apk
 flutter build appbundle --release
@@ -36,10 +43,50 @@ flutter build appbundle --release
 
 Release 构建需本地 `android/key.properties` 与签名证书；这些文件已忽略，不提交仓库。debug 与 Release 覆盖安装需保持相同应用 ID 和签名。真机调试必须遵守 [AGENTS.md](AGENTS.md) 的覆盖安装规则。
 
-### 打包命令-iOS
+### iOS 构建、测试包与生产包
+
+测试包（Debug，未签名，供 Xcode 或真机调试）：
+
+```sh
+flutter build ios --debug --no-codesign
+```
+
+生产包（签名 IPA）：
+
+```sh
+flutter build ipa --release
+```
+
+如果只需要生成未签名的 Release 应用包：
 
 ```sh
 flutter build ios --release --no-codesign
+```
+
+### macOS 构建、测试包与生产包
+
+测试包（Debug）：
+
+```sh
+flutter build macos --debug
+```
+
+生产包（Release）：
+
+```sh
+flutter build macos --release
+```
+
+需要验收或安装生产包时，使用仓库脚本构建并覆盖安装到固定位置：
+
+```sh
+./scripts/install_macos.sh
+```
+
+日常桌面调试使用：
+
+```sh
+flutter run -d macos
 ```
 
 ## 项目文档
