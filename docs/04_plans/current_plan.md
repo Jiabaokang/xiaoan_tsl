@@ -1,7 +1,7 @@
 # 小安翻译 v1.0 活跃执行计划 (Current Execution Plan)
 
 > **当前阶段**：v1.0 冲刺收官与 Google Play 准入就绪阶段  
-> **当前验证**：核心框架、本地 SQLite 数据库、ML Kit 翻译和多语种选择已实现；69 项测试通过，`flutter analyze` 无问题。OnePlus 6 已验证首页缺模型提示、确认下载与续译；移动流量下载尚未实测。
+> **当前验证**：macOS 苹果离线翻译代码已接入并通过自动化回归；2026-10-20 全量 Flutter 测试 275 项、RunnerTests 40 项（1 项实机语言包测试跳过）通过，`flutter analyze` 无问题。真实语言包下载、断网翻译、macOS 14 与完整实机矩阵仍待验收。
 > **执行依据**：严格遵循 `docs/01_prd/prd_v1.0.md` 与 `docs/03_specs/` 各专项规格。
 > **历史步骤**：[核心框架实施计划](../superpowers/plans/2026-09-24-core-framework.md)与[v1 剩余功能实施计划](../superpowers/plans/2026-09-24-v1-completion.md)保留编写时的任务快照；本文件记录当前进度。
 
@@ -9,11 +9,14 @@
 
 ## 任务拆解与进度检查清单
 
-### 待实现专项：macOS 苹果离线翻译（2026-10-20）
+### 开发完成、实机验收待完成：macOS 苹果离线翻译（2026-10-20）
 
-- [ ] 按[接入开发文档](../superpowers/plans/20261020151615_macOS苹果离线翻译接入开发文档.md)实现 macOS 15+ 系统语言包准备、首页与截图翻译、取消/超时及错误恢复。
+- [x] 按[接入开发文档](../superpowers/plans/20261020151615_macOS苹果离线翻译接入开发文档.md)实现 macOS 15+ 系统语言包准备、首页与截图翻译、取消/超时及错误恢复。
+- [x] 新增 `AppleTranslationBridge.swift`、`apple_translation_service.dart`，接入既有桌面通道、设置页能力查询、首页与截图两阶段准备、独立 requestId、取消清理和错误本地化；默认百度与百度凭据保持不变。
+- [x] 验证：`flutter test` 275 项通过，`flutter analyze` 无问题，macOS Debug 构建成功；RunnerTests 执行 40 项、1 项跳过、0 失败；Android OnePlus 9 已覆盖安装并完成启动回归，无崩溃。
+- [x] 证据边界：本机 macOS 26.7.1（x86_64）报告 en→zh-Hans 为 `supported`，语言包尚未安装，因此真实准备与翻译会话测试跳过；未执行真实断网、系统下载授权、系统 sheet、全屏 Space 或真实截图闭环。
 - [ ] 完成系统 14 兼容、真实模型准备与取消重试、断网翻译及移动端回归，登记本轮证据。
-- 本次仅交付开发文档；当前 apple 选项仍固定禁用，服务实现仍未接入，不代表代码、构建或实机验收通过。默认服务保持百度，不自动回退上传文字。
+- 当前 apple 选项在 macOS 15+ 由真实能力查询开放，`supported` 和 `installed` 均可选择；其他平台仍禁用。苹果失败不会自动回退百度或上传原文。开发状态不等于实机验收完成。
 
 ### 阶段一：朗读能力接线与生命周期测试（V1-05）
 - [x] 1.1 `TtsService` 基础实现与单测（已通过 `test/services/speech/tts_service_test.dart`）

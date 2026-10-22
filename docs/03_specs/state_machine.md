@@ -16,11 +16,18 @@ enum TranslationPhase {
   checkingModel,    // 正在检查源/目标语言离线模型是否存在
   modelDownloadRequired, // 缺少模型，等待用户确认下载
   downloadingModel, // 正在后台下载所需的离线语言模型 (可能耗时较长)
+  preparingTranslation, // 苹果系统语言包准备；独立于 ML Kit 下载
   translating,      // 模型就绪，正在进行设备端推理翻译
   success,          // 翻译完成，成功产出译文
   error,            // 发生错误 (模型下载失败、不支持语种或翻译异常)
 }
 ```
+
+苹果请求在语言识别后进入 `preparingTranslation`，此阶段包含在 `isBusy` 中；准备成功且请求仍有效才进入 `translating`。首页提供取消入口，取消回 idle 并保留原文；`appleErrorCode` 配合 `TranslationFailure.apple` 在 `localizedMessage` 中映射提示。准备失败、不支持、busy 和通道异常均不回退百度。
+
+截图同样新增 `ScreenshotStage.preparingTranslation`；准备位于实际翻译的 30 秒超时之外。`ScreenshotFailure.apple` 和 `appleErrorCode` 随快照传入原生覆盖面板，准备期间暂停自动关闭，允许操作苹果宿主及其系统 sheet。准备结束恢复原有计时策略。
+
+首页与截图各自持有唯一苹果 requestId。修改输入、切换语言或服务、新截图、关闭截图和控制器销毁时，先同步使业务请求失效，再异步取消对应原生请求。每个异步阶段均检查有效性，晚到结果不更新界面、不新增成功历史；另一个调用者占用原生协调器时返回 `appleBusy`。
 
 ### 1.2 完整状态类 (`TranslationState`)
 

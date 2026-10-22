@@ -162,6 +162,10 @@ final class MacDesktopBridge: NSObject {
   private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
     let arguments = call.arguments as? [String: Any] ?? [:]
     switch call.method {
+    case "appleTranslationAvailability", "prepareAppleTranslation", "translateText", "cancelAppleTranslation":
+      Task { @MainActor in
+        AppleTranslationBridge.shared.handle(call, result: result)
+      }
     case methodCapture:
       let requestId = arguments["requestId"] as? String ?? ""
       Task { await startCapture(requestId: requestId, result: result) }

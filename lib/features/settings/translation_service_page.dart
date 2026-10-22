@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:xiaoan_tsl/core/network/dio_provider.dart';
 import 'package:xiaoan_tsl/features/translate/app_controller.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
+import 'package:xiaoan_tsl/services/translation/apple_translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/baidu_translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/translation_settings.dart';
@@ -231,11 +232,35 @@ class _TranslationServicePageState
     }
   }
 
-  List<(String, bool)> _services(TranslationPlatform platform) =>
-      switch (platform) {
-        TranslationPlatform.macOS => [('baidu', true), ('apple', false)],
-        _ => [('mlkit', true), ('baidu', true), ('apple', false)],
-      };
+  List<(String, bool)> _services(
+    TranslationPlatform platform,
+    bool appleEnabled,
+  ) => switch (platform) {
+    TranslationPlatform.macOS => [('baidu', true), ('apple', appleEnabled)],
+    _ => [('mlkit', true), ('baidu', true)],
+  };
+
+  // 能力查询失败与旧系统分开展示；刷新期间也保持禁用，避免使用过期能力。
+  String _appleStatus(
+    AppLocalizations l10n,
+    TranslationPlatform platform,
+    AsyncValue<AppleTranslationAvailability> availability,
+  ) {
+    if (platform != TranslationPlatform.macOS) {
+      return l10n.appleTranslationError('appleUnsupported');
+    }
+    if (availability.isLoading) return l10n.appleAvailabilityChecking;
+    if (availability.hasError) return l10n.appleAvailabilityFailed;
+    return switch (availability.asData?.value) {
+      AppleTranslationAvailability.platformUnsupported =>
+        l10n.appleRequiresMacOS15,
+      AppleTranslationAvailability.unsupported =>
+        l10n.appleLanguagePairUnsupported,
+      AppleTranslationAvailability.supported => l10n.appleAvailabilitySupported,
+      AppleTranslationAvailability.installed => l10n.appleAvailabilityInstalled,
+      null => l10n.appleAvailabilityChecking,
+    };
+  }
 
   String _engineLabel(AppLocalizations l10n, String engine) => switch (engine) {
     'mlkit' => l10n.engineMlkit,
@@ -259,7 +284,13 @@ class _TranslationServicePageState
     final controller = ref.read(appControllerProvider.notifier);
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final baiduAvailable = _services(platform).any((e) => e.$1 == 'baidu');
+    final availability = ref.watch(appleTranslationAvailabilityProvider);
+    final appleEnabled =
+        !availability.isLoading &&
+        !availability.hasError &&
+        (availability.asData?.value == AppleTranslationAvailability.supported ||
+            availability.asData?.value ==
+                AppleTranslationAvailability.installed);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.translationServiceTitle)),
@@ -276,11 +307,14 @@ class _TranslationServicePageState
                   },
                   child: Column(
                     children: [
-                      for (final entry in _services(platform))
+                      for (final entry in _services(platform, appleEnabled))
                         RadioListTile<String>(
                           value: entry.$1,
                           enabled: entry.$2,
                           title: Text(_engineLabel(l10n, entry.$1)),
+                          subtitle: entry.$1 == 'apple'
+                              ? Text(_appleStatus(l10n, platform, availability))
+                              : null,
                           secondary: Icon(_engineIcon(entry.$1)),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -289,10 +323,29 @@ class _TranslationServicePageState
                     ],
                   ),
                 ),
+                if (platform == TranslationPlatform.macOS &&
+                    availability.hasError &&
+                    !availability.isLoading)
+                  TextButton.icon(
+                    key: const Key('retryAppleAvailability'),
+                    onPressed: () =>
+                        ref.invalidate(appleTranslationAvailabilityProvider),
+                    icon: const Icon(Icons.refresh),
+                    label: Text(l10n.retryQuery),
+                  ),
               ],
             ),
           ),
-          if (baiduAvailable) ...[
+          if (selected == 'apple') ...[
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: Text(l10n.appleOfflineNotice),
+              ),
+            ),
+          ],
+          if (selected == 'baidu') ...[
             const SizedBox(height: 12),
             Card(
               child: Padding(

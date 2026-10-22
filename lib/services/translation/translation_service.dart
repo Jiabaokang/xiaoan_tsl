@@ -4,7 +4,7 @@ abstract interface class TranslationService {
   String get engineId;
 
   // 是否需要先完成现有 ML Kit 模型检查与下载流程。
-  // 在线服务（百度、苹果）返回 false，移动端 ML Kit 返回 true。
+  // 百度在线翻译、苹果系统离线翻译返回 false，移动端 ML Kit 返回 true。
   bool get requiresMlKitModels;
 
   Future<String> translate({

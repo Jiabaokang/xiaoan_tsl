@@ -59,16 +59,15 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
       panel.contentView = view
       panel.delegate = self
 
-      // 面板外点击关闭。
-      panel.installClickOutsideMonitor { [weak self] in
-        self?.desktopBridge?.triggerDismissScreenshot()
-      }
-
       overlayPanel = panel
       overlayView = view
     }
 
     guard let panel = overlayPanel else { return }
+    // 复用面板时重新安装监听，宿主与系统 sheet 点击由面板判定豁免。
+    panel.installClickOutsideMonitor { [weak self] in
+      self?.desktopBridge?.triggerDismissScreenshot()
+    }
 
     // 将选区坐标映射到屏幕坐标。
     let screens = NSScreen.screens
@@ -117,6 +116,7 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     panel.setFrame(panelFrame, display: true, animate: false)
     panel.alphaValue = 1.0
     panel.makeKeyAndOrderFront(nil)
+    panel.makeFirstResponder(overlayView)
     NSApp.activate(ignoringOtherApps: true)
   }
 
@@ -142,22 +142,26 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
 
     switch stageName {
     case "capturing":
-      stage = .loading("正在截取屏幕…")
+      stage = .loading(localized("正在截取屏幕…", "Capturing screen…"))
       canRetry = false
       canConfigure = false
     case "ocr":
-      stage = .loading("正在识别文字…")
+      stage = .loading(localized("正在识别文字…", "Recognizing text…"))
+      canRetry = false
+      canConfigure = false
+    case "preparingTranslation":
+      stage = .preparingTranslation
       canRetry = false
       canConfigure = false
     case "translating":
-      stage = .loading("正在翻译…")
+      stage = .loading(localized("正在翻译…", "Translating…"))
       canRetry = false
       canConfigure = false
     case "needsConfirm":
       if confirmRequired {
         stage = .needsConfirm
       } else {
-        stage = .loading("正在判断语言…")
+        stage = .loading(localized("正在判断语言…", "Detecting language…"))
       }
       canRetry = false
       canConfigure = false
@@ -166,7 +170,7 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
       canRetry = false
       canConfigure = false
     case "failed":
-      let message = failureMessage(for: failureName)
+      let message = failureMessage(for: failureName, appleErrorCode: snapshot["appleErrorCode"] as? String)
       stage = .failed(message)
       canRetry = recognizedText != nil && !recognizedText!.isEmpty && failureName != "missingCredentials"
       canConfigure = failureName == "missingCredentials"
@@ -191,20 +195,25 @@ class MainFlutterWindow: NSWindow, NSWindowDelegate {
     overlayView?.update(with: overlaySnapshot)
   }
 
-  // 将失败代码映射为用户可读的中文提示。
-  private func failureMessage(for failure: String) -> String {
+  // 原生文案与系统语言一致；苹果错误由稳定代码映射，不暴露 SDK 内部描述。
+  private func localized(_ chinese: String, _ english: String) -> String {
+    Locale.preferredLanguages.first?.hasPrefix("zh") == true ? chinese : english
+  }
+
+  private func failureMessage(for failure: String, appleErrorCode: String?) -> String {
     switch failure {
-    case "permissionDenied": return "屏幕录制权限被拒绝"
-    case "captureFailed": return "截图失败"
-    case "invalidData": return "截图数据无效"
-    case "ocrFailed": return "文字识别失败"
-    case "noText": return "未识别到文字"
-    case "tooLong": return "文字过长（超过 5000 字符）"
-    case "missingCredentials": return "请先配置翻译服务"
-    case "timeout": return "翻译超时"
-    case "translationFailed": return "翻译失败"
-    case "unsupported": return "当前平台不支持"
-    default: return "未知错误"
+    case "apple": return AppleTranslationBridge.message(appleErrorCode ?? "appleTranslationFailed")
+    case "permissionDenied": return localized("屏幕录制权限被拒绝", "Screen recording permission denied")
+    case "captureFailed": return localized("截图失败", "Screen capture failed")
+    case "invalidData": return localized("截图数据无效", "Invalid screenshot data")
+    case "ocrFailed": return localized("文字识别失败", "Text recognition failed")
+    case "noText": return localized("未识别到文字", "No text recognized")
+    case "tooLong": return localized("文字过长（超过 5000 字符）", "Text exceeds 5000 characters")
+    case "missingCredentials": return localized("请先配置翻译服务", "Please configure a translation service")
+    case "timeout": return localized("翻译超时", "Translation timed out")
+    case "translationFailed": return localized("翻译失败", "Translation failed")
+    case "unsupported": return localized("当前平台不支持", "This platform is not supported")
+    default: return localized("未知错误", "Unknown error")
     }
   }
 

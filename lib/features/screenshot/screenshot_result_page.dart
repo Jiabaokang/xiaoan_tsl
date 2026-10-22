@@ -91,6 +91,12 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
         return _CenteredProgress(l10n.screenshotCapturing);
       case ScreenshotStage.ocr:
         return _CenteredProgress(l10n.screenshotRecognizing);
+      case ScreenshotStage.preparingTranslation:
+        return _content(
+          state,
+          l10n,
+          progress: _CenteredProgress(l10n.phasePreparingAppleTranslation),
+        );
       case ScreenshotStage.translating:
         return _content(
           state,
@@ -178,7 +184,7 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  _failureText(state.failure, l10n),
+                  _failureText(state, l10n),
                   key: const Key('screenshotFailureText'),
                 ),
                 const SizedBox(height: 12),
@@ -274,8 +280,8 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
     );
   }
 
-  String _failureText(ScreenshotFailure failure, AppLocalizations l10n) {
-    return switch (failure) {
+  String _failureText(ScreenshotState state, AppLocalizations l10n) {
+    return switch (state.failure) {
       ScreenshotFailure.permissionDenied => l10n.screenshotPermissionDenied,
       ScreenshotFailure.captureFailed => l10n.screenshotCaptureFailed,
       ScreenshotFailure.invalidData => l10n.screenshotInvalidData,
@@ -286,6 +292,9 @@ class _ScreenshotResultPageState extends ConsumerState<ScreenshotResultPage> {
       ScreenshotFailure.timeout => l10n.screenshotTimeout,
       ScreenshotFailure.translationFailed => l10n.screenshotFailed,
       ScreenshotFailure.unsupported => l10n.screenshotPlatformUnsupported,
+      ScreenshotFailure.apple => l10n.appleTranslationError(
+          state.appleErrorCode ?? 'appleTranslationFailed',
+        ),
       ScreenshotFailure.none => '',
     };
   }

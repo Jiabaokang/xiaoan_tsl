@@ -93,6 +93,8 @@ abstract class AppLocalizations {
   String get phaseCheckingModel;
   String get phaseDownloadingModel;
   String get phaseTranslating;
+  String get phasePreparingAppleTranslation;
+  String appleTranslationError(String code);
   String get phaseSuccess;
   String get errorMaxChars;
   String get errorSwapLanguage;
@@ -220,6 +222,13 @@ abstract class AppLocalizations {
   String get engineMlkit;
   String get engineBaidu;
   String get engineApple;
+  String get appleAvailabilityChecking;
+  String get appleRequiresMacOS15;
+  String get appleLanguagePairUnsupported;
+  String get appleAvailabilityFailed;
+  String get appleAvailabilitySupported;
+  String get appleAvailabilityInstalled;
+  String get appleOfflineNotice;
   String get engineBaiduLabel;
   String get engineAppleLabel;
   String get engineUnknownLabel;
@@ -430,6 +439,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get phaseDownloadingModel => '正在下载语言模型...';
   @override
   String get phaseTranslating => '正在翻译...';
+  @override
+  String get phasePreparingAppleTranslation => '正在准备苹果离线翻译，请完成系统提示';
+  @override
+  String appleTranslationError(String code) => switch (code) {
+    'appleUnsupported' => '当前系统不支持苹果离线翻译',
+    'appleUnsupportedLanguage' => '所选语言组合暂不支持苹果离线翻译',
+    'appleCancelled' => '苹果离线翻译已取消',
+    'applePreparationFailed' => '语言包准备失败，请检查网络和可用空间后重试',
+    'applePreparationTimeout' => '语言包准备超时，请稍后重试',
+    'appleBusy' => '苹果翻译正在处理另一项任务，请稍后重试',
+    'appleTimeout' => '翻译超时，请重试',
+    _ => '苹果离线翻译失败，请重试',
+  };
   @override
   String get phaseSuccess => '翻译成功';
   @override
@@ -681,6 +703,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get engineBaidu => '百度在线翻译';
   @override
   String get engineApple => '苹果离线翻译（macOS 15+）';
+  @override
+  String get appleAvailabilityChecking => '正在检查苹果翻译可用性…';
+  @override
+  String get appleRequiresMacOS15 => '需要 macOS 15 或更新版本';
+  @override
+  String get appleLanguagePairUnsupported => '此设备暂不支持英文与简体中文离线翻译';
+  @override
+  String get appleAvailabilityFailed => '无法检查苹果翻译，请重试';
+  @override
+  String get appleAvailabilitySupported => '支持，准备时由系统确认下载语言包';
+  @override
+  String get appleAvailabilityInstalled => '系统语言包已安装';
+  @override
+  String get appleOfflineNotice => '首次准备需要联网下载语言包；翻译在设备端进行，语言包由系统管理。';
   @override
   String get engineBaiduLabel => '百度翻译';
   @override
@@ -967,6 +1003,25 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get phaseTranslating => 'Translating...';
   @override
+  String get phasePreparingAppleTranslation =>
+      'Preparing Apple offline translation. Please complete the system prompts.';
+  @override
+  String appleTranslationError(String code) => switch (code) {
+    'appleUnsupported' =>
+      'Apple offline translation is not supported on this system.',
+    'appleUnsupportedLanguage' =>
+      'Apple offline translation does not support this language pair.',
+    'appleCancelled' => 'Apple offline translation was cancelled.',
+    'applePreparationFailed' =>
+      'Language pack preparation failed. Check your network and available storage, then retry.',
+    'applePreparationTimeout' =>
+      'Language pack preparation timed out. Please try again later.',
+    'appleBusy' =>
+      'Apple translation is handling another task. Please try again later.',
+    'appleTimeout' => 'Translation timed out. Please retry.',
+    _ => 'Apple offline translation failed. Please retry.',
+  };
+  @override
   String get phaseSuccess => 'Translation successful';
   @override
   String get errorMaxChars => 'Maximum 5000 characters allowed';
@@ -1245,6 +1300,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get engineBaidu => 'Baidu Online Translation';
   @override
   String get engineApple => 'Apple On-device Translation (macOS 15+)';
+  @override
+  String get appleAvailabilityChecking =>
+      'Checking Apple translation availability…';
+  @override
+  String get appleRequiresMacOS15 => 'Requires macOS 15 or later';
+  @override
+  String get appleLanguagePairUnsupported =>
+      'English and Simplified Chinese offline translation is not supported on this device.';
+  @override
+  String get appleAvailabilityFailed =>
+      'Could not check Apple translation. Please retry.';
+  @override
+  String get appleAvailabilitySupported =>
+      'Supported; macOS will ask before downloading language packs';
+  @override
+  String get appleAvailabilityInstalled => 'System language packs installed';
+  @override
+  String get appleOfflineNotice =>
+      'The first preparation needs internet access to download language packs. Translation runs on-device; macOS manages the packs.';
   @override
   String get engineBaiduLabel => 'Baidu';
   @override

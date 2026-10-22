@@ -33,6 +33,8 @@
 		D0A100000000000000000002 /* MacDesktopBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A100000000000000000001 /* MacDesktopBridge.swift */; };
 		D0A100000000000000000004 /* ScreenCaptureCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A100000000000000000003 /* ScreenCaptureCoordinator.swift */; };
 		D0A100000000000000000006 /* OverlayResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A100000000000000000005 /* OverlayResultView.swift */; };
+		D0B100000000000000000006 /* AppleTranslationBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B100000000000000000005 /* AppleTranslationBridge.swift */; };
+		D0B100000000000000000008 /* AppleTranslationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B100000000000000000007 /* AppleTranslationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -94,8 +96,10 @@
 		D0A100000000000000000001 /* MacDesktopBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacDesktopBridge.swift; sourceTree = "<group>"; };
 		D0A100000000000000000003 /* ScreenCaptureCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureCoordinator.swift; sourceTree = "<group>"; };
 		D0A100000000000000000005 /* OverlayResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayResultView.swift; sourceTree = "<group>"; };
+		D0B100000000000000000005 /* AppleTranslationBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTranslationBridge.swift; sourceTree = "<group>"; };
 		E61DFEC13E9BA7CE8D488405 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E6EC6E675273ED31E5A56ADE /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
+		D0B100000000000000000007 /* AppleTranslationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTranslationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -123,6 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				331C80D7294CF71000263BE5 /* RunnerTests.swift */,
+				D0B100000000000000000007 /* AppleTranslationTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -190,6 +195,7 @@
 				D0A100000000000000000001 /* MacDesktopBridge.swift */,
 				D0A100000000000000000003 /* ScreenCaptureCoordinator.swift */,
 				D0A100000000000000000005 /* OverlayResultView.swift */,
+				D0B100000000000000000005 /* AppleTranslationBridge.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -449,6 +455,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				331C80D8294CF71000263BE5 /* RunnerTests.swift in Sources */,
+				D0B100000000000000000008 /* AppleTranslationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -462,6 +469,7 @@
 				D0A100000000000000000002 /* MacDesktopBridge.swift in Sources */,
 				D0A100000000000000000004 /* ScreenCaptureCoordinator.swift in Sources */,
 				D0A100000000000000000006 /* OverlayResultView.swift in Sources */,
+				D0B100000000000000000006 /* AppleTranslationBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -602,6 +610,13 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					Translation,
+					"-weak_framework",
+					_Translation_SwiftUI,
+				);
 				PRODUCT_MODULE_NAME = Runner;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_VERSION = 5.0;
@@ -736,6 +751,13 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					Translation,
+					"-weak_framework",
+					_Translation_SwiftUI,
+				);
 				PRODUCT_MODULE_NAME = Runner;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -757,6 +779,13 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					Translation,
+					"-weak_framework",
+					_Translation_SwiftUI,
 				);
 				PRODUCT_MODULE_NAME = Runner;
 				PROVISIONING_PROFILE_SPECIFIER = "";

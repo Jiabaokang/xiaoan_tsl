@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +9,7 @@ import 'package:xiaoan_tsl/features/language/app_languages.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 import 'package:xiaoan_tsl/services/language/language_detection_provider.dart';
 import 'package:xiaoan_tsl/services/translation/baidu_translation_service.dart';
+import 'package:xiaoan_tsl/services/translation/apple_translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/model_download_controller.dart';
 import 'package:xiaoan_tsl/services/translation/model_download_status.dart';
@@ -19,12 +22,17 @@ enum TranslationPhase {
   checkingModel,
   modelDownloadRequired,
   downloadingModel,
+  preparingTranslation,
   translating,
   success,
   error;
 
   bool get isBusy => switch (this) {
-    detecting || checkingModel || downloadingModel || translating => true,
+    detecting ||
+    checkingModel ||
+    downloadingModel ||
+    preparingTranslation ||
+    translating => true,
     _ => false,
   };
 }
@@ -39,6 +47,7 @@ enum TranslationFailure {
   translation,
   storage,
   config,
+  apple,
 }
 
 // 首页、历史、收藏及设置共用的一份应用状态。
@@ -60,6 +69,7 @@ class AppState {
     this.modelDownloadCodes = const [],
     this.modelDownloadIndex = 0,
     this.modelDownloadError,
+    this.appleErrorCode,
   });
 
   final String input;
@@ -79,6 +89,8 @@ class AppState {
   final List<String> modelDownloadCodes;
   final int modelDownloadIndex;
   final ModelDownloadException? modelDownloadError;
+  // 苹果错误保留稳定代码，由本地化出口选择可恢复提示。
+  final String? appleErrorCode;
 
   String? get downloadingModelCode =>
       modelDownloadIndex < modelDownloadCodes.length
@@ -99,6 +111,8 @@ class AppState {
     TranslationPhase.checkingModel => l10n.phaseCheckingModel,
     TranslationPhase.modelDownloadRequired => l10n.modelDownloadRequired,
     TranslationPhase.downloadingModel => l10n.phaseDownloadingModel,
+    TranslationPhase.preparingTranslation =>
+      l10n.phasePreparingAppleTranslation,
     TranslationPhase.translating => l10n.phaseTranslating,
     TranslationPhase.success => l10n.phaseSuccess,
     TranslationPhase.error => switch (failure) {
@@ -115,6 +129,9 @@ class AppState {
       ),
       TranslationFailure.translation => l10n.errorTranslation,
       TranslationFailure.config => l10n.errorConfigMissing,
+      TranslationFailure.apple => l10n.appleTranslationError(
+        appleErrorCode ?? 'appleTranslationFailed',
+      ),
       TranslationFailure.storage =>
         message == '无法将结果写入历史' ? l10n.errorStorageSave : l10n.errorStorage,
       TranslationFailure.none => message,
@@ -140,6 +157,7 @@ class AppState {
     List<String>? modelDownloadCodes,
     int? modelDownloadIndex,
     Object? modelDownloadError = _unchanged,
+    Object? appleErrorCode = _unchanged,
   }) => AppState(
     input: input ?? this.input,
     sourceLanguage: sourceLanguage ?? this.sourceLanguage,
@@ -163,6 +181,9 @@ class AppState {
     modelDownloadError: identical(modelDownloadError, _unchanged)
         ? this.modelDownloadError
         : modelDownloadError as ModelDownloadException?,
+    appleErrorCode: identical(appleErrorCode, _unchanged)
+        ? this.appleErrorCode
+        : appleErrorCode as String?,
   );
 }
 
@@ -174,11 +195,50 @@ final appControllerProvider = NotifierProvider<AppController, AppState>(
 class AppController extends Notifier<AppState> {
   int _request = 0;
   Future<void>? _initialization;
+  AppleTranslationService? _appleService;
+  String? _appleRequestId;
 
   @override
   AppState build() {
+    ref.onDispose(_invalidateRequest);
+    ref.listen(translationEngineProvider, (previous, next) {
+      if (previous != next) cancelTranslation();
+    });
     Future.microtask(initialize);
     return const AppState();
+  }
+
+  // 先使业务请求失效，再取消其原生宿主；不能误取消其他调用者的任务。
+  void _invalidateRequest() {
+    _request++;
+    final service = _appleService;
+    final requestId = _appleRequestId;
+    _appleService = null;
+    _appleRequestId = null;
+    if (service != null && requestId != null) {
+      unawaited(_cancelApple(service, requestId));
+    }
+  }
+
+  Future<void> _cancelApple(AppleTranslationService service, String id) async {
+    try {
+      await service.cancel(id);
+    } catch (_) {
+      // 清理失败不能覆盖当前请求的结果或错误。
+    }
+  }
+
+  // 用户取消或服务切换回到空闲，保留原文以便重试。
+  void cancelTranslation() {
+    _invalidateRequest();
+    if (!ref.mounted) return;
+    state = state.copyWith(
+      result: null,
+      phase: TranslationPhase.idle,
+      failure: TranslationFailure.none,
+      appleErrorCode: null,
+      message: '等待翻译',
+    );
   }
 
   Future<void> initialize() => _initialization ??= _load();
@@ -215,7 +275,7 @@ class AppController extends Notifier<AppState> {
   }
 
   void setInput(String value) {
-    _request++;
+    _invalidateRequest();
     state = state.copyWith(
       input: value,
       result: null,
@@ -227,7 +287,7 @@ class AppController extends Notifier<AppState> {
   }
 
   void setSourceLanguage(String code) {
-    _request++;
+    _invalidateRequest();
     state = state.copyWith(
       sourceLanguage: code,
       result: null,
@@ -240,7 +300,7 @@ class AppController extends Notifier<AppState> {
 
   void setTargetLanguage(String code) {
     if (code == 'auto') return;
-    _request++;
+    _invalidateRequest();
     state = state.copyWith(
       targetLanguage: code,
       result: null,
@@ -257,7 +317,7 @@ class AppController extends Notifier<AppState> {
     if (!ref.mounted) return;
     final useAsCurrent = state.targetLanguage == state.defaultTargetLanguage;
     final targetChanged = useAsCurrent && state.targetLanguage != code;
-    if (targetChanged) _request++;
+    if (targetChanged) _invalidateRequest();
     state = state.copyWith(
       defaultTargetLanguage: code,
       targetLanguage: useAsCurrent ? code : state.targetLanguage,
@@ -285,15 +345,8 @@ class AppController extends Notifier<AppState> {
 
   // 切换翻译服务并让旧请求立即失效；输入保留，旧结果不更新 UI 也不入历史。
   Future<void> setTranslationEngine(String engine) async {
+    cancelTranslation();
     await ref.read(translationEngineProvider.notifier).setEngine(engine);
-    if (!ref.mounted) return;
-    _request++;
-    state = state.copyWith(
-      result: null,
-      phase: TranslationPhase.idle,
-      failure: TranslationFailure.none,
-      message: '等待翻译',
-    );
   }
 
   bool swapLanguages() {
@@ -308,7 +361,7 @@ class AppController extends Notifier<AppState> {
       );
       return false;
     }
-    _request++;
+    _invalidateRequest();
     state = state.copyWith(
       sourceLanguage: state.targetLanguage,
       targetLanguage: resolved,
@@ -349,6 +402,7 @@ class AppController extends Notifier<AppState> {
       modelDownloadCodes: const [],
       modelDownloadIndex: 0,
       modelDownloadError: null,
+      appleErrorCode: null,
     );
     try {
       final detected = await ref.read(languageDetectionProvider).identify(text);
@@ -388,7 +442,7 @@ class AppController extends Notifier<AppState> {
         return;
       }
       state = state.copyWith(detectedLanguage: source);
-      // 模型检查与下载只属于 ML Kit 服务；在线服务不读取模型 Provider。
+      // 模型检查与下载只属于 ML Kit；苹果语言包由系统准备。
       if (service.requiresMlKitModels) {
         final models = ref.read(translationModelProvider);
         final missing = <String>[];
@@ -421,15 +475,40 @@ class AppController extends Notifier<AppState> {
           if (!ref.mounted || request != _request) return;
         }
       }
+      String? appleRequestId;
+      if (service is AppleTranslationService) {
+        appleRequestId = generateAppleTranslationRequestId();
+        _appleService = service;
+        _appleRequestId = appleRequestId;
+        state = state.copyWith(phase: TranslationPhase.preparingTranslation);
+        // 状态监听器可能同步取消；先确认请求仍有效再创建原生宿主。
+        if (!ref.mounted || request != _request) return;
+        await service.prepare(
+          requestId: appleRequestId,
+          sourceLanguage: source,
+          targetLanguage: target,
+        );
+        if (!ref.mounted || request != _request) {
+          await _cancelApple(service, appleRequestId);
+          return;
+        }
+      }
       state = state.copyWith(
         phase: TranslationPhase.translating,
         message: '正在翻译',
       );
-      final translated = await service.translate(
-        text: text,
-        sourceLanguage: source,
-        targetLanguage: target,
-      );
+      final translated = service is AppleTranslationService
+          ? await service.translate(
+              text: text,
+              sourceLanguage: source,
+              targetLanguage: target,
+              requestId: appleRequestId,
+            )
+          : await service.translate(
+              text: text,
+              sourceLanguage: source,
+              targetLanguage: target,
+            );
       if (!ref.mounted || request != _request) return;
       final record = TranslationRecord(
         sourceText: text,
@@ -465,6 +544,18 @@ class AppController extends Notifier<AppState> {
       }
     } catch (error) {
       if (ref.mounted && request == _request) {
+        if (error is AppleTranslationException) {
+          state = state.copyWith(
+            phase: error.isCancelled
+                ? TranslationPhase.idle
+                : TranslationPhase.error,
+            failure: error.isCancelled
+                ? TranslationFailure.none
+                : TranslationFailure.apple,
+            appleErrorCode: error.isCancelled ? null : error.code,
+          );
+          return;
+        }
         // 缺少凭据属于配置错误，给出明确的设置恢复入口文案。
         if (error is BaiduConfigException) {
           state = state.copyWith(
@@ -493,6 +584,15 @@ class AppController extends Notifier<AppState> {
           modelDownloadError: error is ModelDownloadException ? error : null,
         );
       }
+    } finally {
+      // 正常结束也清理宿主；旧请求的 finally 不能动新请求。
+      if (request == _request) {
+        final apple = _appleService;
+        final id = _appleRequestId;
+        _appleService = null;
+        _appleRequestId = null;
+        if (apple != null && id != null) await _cancelApple(apple, id);
+      }
     }
   }
 
@@ -512,7 +612,7 @@ class AppController extends Notifier<AppState> {
       );
       return;
     }
-    _request++;
+    _invalidateRequest();
     state = state.copyWith(
       input: record.sourceText,
       sourceLanguage: record.sourceLanguage,

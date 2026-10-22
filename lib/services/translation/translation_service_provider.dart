@@ -5,6 +5,7 @@ import 'package:xiaoan_tsl/core/database/database_provider.dart';
 import 'package:xiaoan_tsl/core/network/dio_provider.dart';
 
 import 'baidu_translation_service.dart';
+import 'apple_translation_service.dart';
 import 'mlkit_translation_service.dart';
 import 'translation_service.dart';
 import 'translation_settings.dart';
@@ -12,7 +13,7 @@ import 'translation_settings.dart';
 // 运行平台标识，测试可整体覆盖；页面不再各自重复判断平台。
 enum TranslationPlatform { android, ios, macOS, other }
 
-// 平台选择集中在一处：移动端允许 ML Kit，macOS 首版只提供百度。
+// 平台选择集中在一处：移动端允许 ML Kit，macOS 支持百度及苹果服务。
 final translationPlatformProvider = Provider<TranslationPlatform>((ref) {
   if (kIsWeb) return TranslationPlatform.other;
   return switch (defaultTargetPlatform) {
@@ -93,7 +94,10 @@ TranslationService _resolveService(
       }
       return MlKitTranslationService();
     case 'apple':
-      // 苹果服务在扩展阶段交付前不可用，回退平台默认并保持准确标识。
+      // 已保存的 macOS 苹果偏好不因暂时不可用改走在线服务。
+      if (platform == TranslationPlatform.macOS) {
+        return ref.watch(appleTranslationServiceProvider);
+      }
       return _resolveService(ref, platform, defaultEngineFor(platform));
     default:
       // 未知或空配置回退平台默认。

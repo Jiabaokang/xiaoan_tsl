@@ -68,6 +68,7 @@ class _DesktopEventBridgeState extends ConsumerState<DesktopEventBridge> {
       ref.read(macosDesktopServiceProvider).updateResult({
         'stage': state.stage.name,
         'failure': state.failure.name,
+        'appleErrorCode': state.appleErrorCode,
         'png': state.pngBytes,
         'recognizedText': state.recognizedText,
         'translatedText': state.translatedText,

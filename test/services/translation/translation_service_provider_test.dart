@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as path;
@@ -9,6 +10,8 @@ import 'package:xiaoan_tsl/core/database/database_provider.dart';
 import 'package:xiaoan_tsl/core/database/local_store.dart';
 import 'package:xiaoan_tsl/core/network/dio_provider.dart';
 import 'package:xiaoan_tsl/services/translation/baidu_translation_service.dart';
+import 'package:xiaoan_tsl/services/translation/apple_translation_service.dart';
+import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/mlkit_translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/translation_settings.dart';
@@ -48,6 +51,7 @@ class _FakeCredentials implements SecureCredentialStore {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(sqfliteFfiInit);
 
   late Directory directory;
@@ -136,4 +140,113 @@ void main() {
     expect(service, isA<MlKitTranslationService>());
     expect(service.engineId, 'mlkit');
   });
+
+  test(
+    'macOS apple resolves override without reading network credentials or ML Kit',
+    () async {
+      await seedEngine('apple');
+      final apple = AppleTranslationService();
+      final container = ProviderContainer(
+        overrides: [
+          localStoreProvider.overrideWithValue(store),
+          translationPlatformProvider.overrideWithValue(
+            TranslationPlatform.macOS,
+          ),
+          appleTranslationServiceProvider.overrideWithValue(apple),
+          dioProvider.overrideWith(
+            (_) => throw StateError('No cloud requests'),
+          ),
+          secureCredentialStoreProvider.overrideWith(
+            (_) => throw StateError('No credentials'),
+          ),
+          translationModelProvider.overrideWith(
+            (_) => throw StateError('No ML Kit'),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(translationEngineProvider.notifier).ready;
+      final service = container.read(translationServiceProvider);
+      expect(service, same(apple));
+      expect(service.engineId, 'apple');
+      await expectLater(
+        service.translate(
+          text: 'Hello',
+          sourceLanguage: 'en',
+          targetLanguage: 'zh',
+        ),
+        throwsA(isA<AppleTranslationException>()),
+      );
+      expect(container.read(translationServiceProvider), same(apple));
+    },
+  );
+
+  for (final platform in [
+    TranslationPlatform.android,
+    TranslationPlatform.ios,
+    TranslationPlatform.other,
+  ]) {
+    test(
+      '$platform availability never creates apple service or calls channel',
+      () async {
+        final container = ProviderContainer(
+          overrides: [
+            translationPlatformProvider.overrideWithValue(platform),
+            appleTranslationServiceProvider.overrideWith(
+              (_) => throw StateError('No macOS channel'),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        expect(
+          await container.read(appleTranslationAvailabilityProvider.future),
+          AppleTranslationAvailability.platformUnsupported,
+        );
+      },
+    );
+  }
+
+  test(
+    'macOS availability queries en/zh and refreshes after invalidation',
+    () async {
+      const channel = MethodChannel('test/apple_provider');
+      final calls = <MethodCall>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        calls.add(call);
+        return {'status': calls.length == 1 ? 'supported' : 'installed'};
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      final container = ProviderContainer(
+        overrides: [
+          translationPlatformProvider.overrideWithValue(
+            TranslationPlatform.macOS,
+          ),
+          appleTranslationServiceProvider.overrideWithValue(
+            AppleTranslationService(channel: channel),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(
+        await container.read(appleTranslationAvailabilityProvider.future),
+        AppleTranslationAvailability.supported,
+      );
+      container.invalidate(appleTranslationAvailabilityProvider);
+      expect(
+        await container.read(appleTranslationAvailabilityProvider.future),
+        AppleTranslationAvailability.installed,
+      );
+      expect(
+        calls.every(
+          (call) =>
+              call.method == 'appleTranslationAvailability' &&
+              (call.arguments as Map)['sourceLanguage'] == 'en' &&
+              (call.arguments as Map)['targetLanguage'] == 'zh',
+        ),
+        isTrue,
+      );
+    },
+  );
 }

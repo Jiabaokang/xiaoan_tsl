@@ -19,6 +19,7 @@ import 'package:xiaoan_tsl/services/language/language_detection_provider.dart';
 import 'package:xiaoan_tsl/services/translation/model_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/mlkit_model_service.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service.dart';
+import 'package:xiaoan_tsl/services/translation/apple_translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/translation_settings.dart';
 import 'package:xiaoan_tsl/services/speech/speech_service_provider.dart';
@@ -165,6 +166,84 @@ void main() {
       UncontrolledProviderScope(container: container, child: const XiaoanApp()),
     );
     await tester.pumpAndSettle();
+  }
+
+  for (final locale in ['zh', 'en']) {
+    for (final theme in [ThemeMode.light, ThemeMode.dark]) {
+      testWidgets('苹果准备可取消且保留原文：$locale / ${theme.name}', (tester) async {
+        const channel = MethodChannel('test/widget/apple_translation');
+        final preparing = Completer<void>();
+        var cancelled = false;
+        tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          (call) async {
+            switch (call.method) {
+              case 'appleTranslationAvailability':
+                return {'status': 'supported'};
+              case 'prepareAppleTranslation':
+                await preparing.future;
+                return null;
+              case 'cancelAppleTranslation':
+                cancelled = true;
+                return null;
+              case 'translateText':
+                throw StateError('已取消的准备不得进入翻译');
+            }
+            return null;
+          },
+        );
+        addTearDown(
+          () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            channel,
+            null,
+          ),
+        );
+        container.dispose();
+        container = ProviderContainer(
+          overrides: [
+            localStoreProvider.overrideWithValue(store),
+            translationServiceProvider.overrideWithValue(
+              AppleTranslationService(channel: channel),
+            ),
+            macosDesktopServiceProvider.overrideWithValue(
+              MacosDesktopUnsupportedService(),
+            ),
+            languageDetectionProvider.overrideWithValue(
+              TestLanguageDetectionService(),
+            ),
+          ],
+        );
+        final controller = container.read(appControllerProvider.notifier);
+        await tester.runAsync(controller.initialize);
+        await tester.runAsync(() => controller.setLocaleMode(locale));
+        await tester.runAsync(() => controller.setThemeMode(theme));
+        await pumpApp(tester);
+        controller.setInput('Hello, world!');
+        final pending = controller.translate();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(
+          container.read(appControllerProvider).phase,
+          TranslationPhase.preparingTranslation,
+        );
+        final cancel = find.widgetWithText(
+          TextButton,
+          locale == 'zh' ? '取消' : 'Cancel',
+        );
+        await tester.ensureVisible(cancel);
+        await tester.tap(cancel);
+        await tester.pump();
+        expect(
+          container.read(appControllerProvider).phase,
+          TranslationPhase.idle,
+        );
+        expect(container.read(appControllerProvider).input, 'Hello, world!');
+        expect(cancelled, isTrue);
+        preparing.complete();
+        await tester.runAsync(() => pending);
+        expect(tester.takeException(), isNull);
+      });
+    }
   }
 
   testWidgets('macOS 截图快捷键保留主页和输入，不再把结果路由压到主页上', (tester) async {

@@ -39,7 +39,7 @@ class RunnerTests: XCTestCase {
     XCTAssertTrue(text.lowercased().contains("hello world"), text)
   }
 
-  // 截图结果应使用独立窗口，不能改变主窗口尺寸或最小化状态。
+  // 截图结果应使用原位覆盖面板，不能改变主窗口尺寸或最小化状态。
   @MainActor
   func testMinimizedWindowShowsScreenshotResult() async throws {
     let window = try XCTUnwrap(NSApp.windows.compactMap { $0 as? MainFlutterWindow }.first)
@@ -51,44 +51,40 @@ class RunnerTests: XCTestCase {
     window.miniaturize(nil)
     await fulfillment(of: [minimized], timeout: 5)
     XCTAssertTrue(window.isMiniaturized)
-    window.showResultWindow(displayId: CGMainDisplayID(), selection: NSRect(x: 50, y: 50, width: 200, height: 100))
+    window.showOverlayPanel(displayId: CGMainDisplayID(), selection: NSRect(x: 50, y: 50, width: 200, height: 100))
     XCTAssertTrue(window.isMiniaturized)
     XCTAssertEqual(window.frame, originalFrame)
-    let result = try XCTUnwrap(NSApp.windows.first {
-      $0 !== window && $0.contentViewController is FlutterViewController
-    })
-    defer { result.orderOut(nil) }
+    let result = try XCTUnwrap(window.overlayPanel)
+    defer { window.closeOverlayPanel() }
     XCTAssertTrue(result.isVisible)
-    XCTAssertFalse((result.contentViewController as? FlutterViewController)?.engine ===
-      (window.contentViewController as? FlutterViewController)?.engine)
   }
 
-  // Dock 在译文可见时仍打开主页；两种关窗都不销毁主引擎，下一次截图复用结果窗。
+  // Dock 在覆盖面板可见时仍打开主页；两种关窗都不销毁主引擎，下一次截图复用覆盖面板。
   @MainActor
   func testDockAndResultCloseKeepMainWindowAvailable() throws {
     let window = try XCTUnwrap(NSApp.windows.compactMap { $0 as? MainFlutterWindow }.first)
     let delegate = try XCTUnwrap(NSApp.delegate as? AppDelegate)
     let originalFrame = window.frame
-    window.showResultWindow(displayId: CGMainDisplayID(), selection: .zero)
-    let result = try XCTUnwrap(window.resultWindow)
-    defer { window.closeResultWindow() }
+    window.showOverlayPanel(displayId: CGMainDisplayID(), selection: .zero)
+    let result = try XCTUnwrap(window.overlayPanel)
+    defer { window.closeOverlayPanel() }
     window.orderOut(nil)
     XCTAssertFalse(delegate.applicationShouldHandleReopen(NSApp, hasVisibleWindows: true))
     XCTAssertTrue(window.isVisible)
     XCTAssertTrue(result.isVisible)
     XCTAssertEqual(window.frame, originalFrame)
 
-    // 框选隐藏两个窗口；关闭结果只隐藏结果窗并恢复主页。
+    // 框选隐藏两个窗口；关闭覆盖面板只隐藏结果窗并恢复主页。
     window.hideWindowsForCapture()
     XCTAssertFalse(window.isVisible)
     XCTAssertFalse(result.isVisible)
-    window.showResultWindow(displayId: CGMainDisplayID(), selection: .zero)
-    result.performClose(nil)
+    window.showOverlayPanel(displayId: CGMainDisplayID(), selection: .zero)
+    window.closeOverlayPanel()
     XCTAssertFalse(result.isVisible)
     XCTAssertTrue(window.isVisible)
     XCTAssertFalse(delegate.applicationShouldTerminateAfterLastWindowClosed(NSApp))
-    window.showResultWindow(displayId: CGMainDisplayID(), selection: .zero)
-    XCTAssertTrue(window.resultWindow === result)
+    window.showOverlayPanel(displayId: CGMainDisplayID(), selection: .zero)
+    XCTAssertTrue(window.overlayPanel === result)
     XCTAssertTrue(result.isVisible)
     window.performClose(nil)
     XCTAssertFalse(window.isVisible)

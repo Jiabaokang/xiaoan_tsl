@@ -10,6 +10,7 @@ import 'package:xiaoan_tsl/features/translate/app_controller.dart';
 import 'package:xiaoan_tsl/services/desktop/macos_desktop_service.dart';
 import 'package:xiaoan_tsl/services/language/language_detection_provider.dart';
 import 'package:xiaoan_tsl/services/translation/baidu_translation_service.dart';
+import 'package:xiaoan_tsl/services/translation/apple_translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
 
@@ -19,6 +20,7 @@ enum ScreenshotStage {
   capturing,
   ocr,
   needsConfirm,
+  preparingTranslation,
   translating,
   done,
   failed,
@@ -37,6 +39,7 @@ enum ScreenshotFailure {
   timeout,
   translationFailed,
   unsupported,
+  apple,
 }
 
 // 一次截图翻译会话的状态；pngBytes 在关闭与 Esc 时释放。
@@ -51,12 +54,17 @@ class ScreenshotState {
     this.translatedText,
     this.confirmRequired = false,
     this.historySaveFailed = false,
+    this.appleErrorCode,
   });
 
   static const idle = ScreenshotState(stage: ScreenshotStage.idle);
+  static const _unchanged = Object();
 
   final ScreenshotStage stage;
   final ScreenshotFailure failure;
+
+  // 苹果稳定错误码由结果页和原生面板各自本地化。
+  final String? appleErrorCode;
 
   // 选区截图 PNG 字节；done/failed 阶段仍保留用于展示。
   final Uint8List? pngBytes;
@@ -78,6 +86,7 @@ class ScreenshotState {
   bool get busy =>
       stage == ScreenshotStage.capturing ||
       stage == ScreenshotStage.ocr ||
+      stage == ScreenshotStage.preparingTranslation ||
       stage == ScreenshotStage.translating;
 
   ScreenshotState copyWith({
@@ -90,10 +99,14 @@ class ScreenshotState {
     String? translatedText,
     bool? confirmRequired,
     bool? historySaveFailed,
+    Object? appleErrorCode = _unchanged,
   }) {
     return ScreenshotState(
       stage: stage ?? this.stage,
       failure: failure ?? this.failure,
+      appleErrorCode: identical(appleErrorCode, _unchanged)
+          ? this.appleErrorCode
+          : appleErrorCode as String?,
       pngBytes: pngBytes ?? this.pngBytes,
       selection: selection ?? this.selection,
       displayId: displayId ?? this.displayId,
@@ -112,6 +125,7 @@ final screenshotControllerProvider =
       ScreenshotController.new,
     );
 
+// 管理截图请求与苹果准备生命周期，取消只清理本控制器持有的原生请求。
 class ScreenshotController extends Notifier<ScreenshotState> {
   ScreenshotController({this.translateTimeout = const Duration(seconds: 30)});
 
@@ -123,33 +137,36 @@ class ScreenshotController extends Notifier<ScreenshotState> {
 
   // 请求开始固定的服务实例，避免截图与翻译之间服务切换。
   TranslationService? _fixedService;
+  MacosDesktopService? _desktop;
+  String? _captureRequestId;
+  String? _appleRequestId;
 
   @override
   ScreenshotState build() {
+    ref.onDispose(() => unawaited(_invalidate()));
     // 服务偏好变化时让截图会话立即失效，旧响应不得显示或写入历史。
     ref.listen(translationEngineProvider, (previous, next) {
       if (previous == next) return;
-      _session++;
-      _fixedService = null;
-      state = const ScreenshotState(stage: ScreenshotStage.idle);
+      unawaited(_invalidate());
+      state = ScreenshotState.idle;
     });
     return ScreenshotState.idle;
   }
 
   // 开始一次新截图：先明确取消旧会话再开启新会话，符合重复触发规则。
   Future<void> startCapture() async {
-    final desktop = ref.read(macosDesktopServiceProvider);
-    _session++;
+    final cancellation = _invalidate();
     final session = _session;
+    final desktop = ref.read(macosDesktopServiceProvider);
+    final requestId = generateAppleTranslationRequestId();
+    _desktop = desktop;
+    _captureRequestId = requestId;
     _fixedService = ref.read(translationServiceProvider);
-    try {
-      await desktop.cancelCapture('shot-${session - 1}');
-    } catch (_) {
-      // 首次触发或通道未就绪时忽略。
-    }
     state = const ScreenshotState(stage: ScreenshotStage.capturing);
+    await cancellation;
+    if (!_isCurrent(session)) return;
     try {
-      final result = await desktop.captureRegion('shot-$session');
+      final result = await desktop.captureRegion(requestId);
       if (!ref.mounted || session != _session) return;
       if (result.cancelled) {
         state = ScreenshotState.idle;
@@ -178,7 +195,7 @@ class ScreenshotController extends Notifier<ScreenshotState> {
           selection: selection,
         );
       } catch (_) {}
-      await _recognize(session);
+      await _recognize(session, requestId);
     } on MacosDesktopPermissionException {
       _fail(ScreenshotFailure.permissionDenied, session);
     } on MacosDesktopPlatformUnsupportedException {
@@ -188,13 +205,14 @@ class ScreenshotController extends Notifier<ScreenshotState> {
     }
   }
 
-  Future<void> _recognize(int session) async {
+  Future<void> _recognize(int session, String requestId) async {
+    if (!_isCurrent(session)) return;
     final png = state.pngBytes;
     if (png == null) return;
     try {
       final text = await ref
           .read(macosDesktopServiceProvider)
-          .recognizeText('shot-$session', png);
+          .recognizeText(requestId, png);
       if (!ref.mounted || session != _session) return;
       final trimmed = text.trim();
       if (trimmed.isEmpty) {
@@ -243,33 +261,84 @@ class ScreenshotController extends Notifier<ScreenshotState> {
   }
 
   Future<void> _translate(int session) async {
+    if (!_isCurrent(session)) return;
     final text = state.recognizedText;
     if (text == null || text.isEmpty) return;
+    final TranslationService service =
+        _fixedService ?? ref.read(translationServiceProvider);
+    final requestId = service is AppleTranslationService
+        ? generateAppleTranslationRequestId()
+        : null;
+    _appleRequestId = requestId;
     state = state.copyWith(
-      stage: ScreenshotStage.translating,
+      stage: service is AppleTranslationService
+          ? ScreenshotStage.preparingTranslation
+          : ScreenshotStage.translating,
+      failure: ScreenshotFailure.none,
+      appleErrorCode: null,
       confirmRequired: false,
     );
-    final service = (_fixedService ?? ref.read(translationServiceProvider))!;
     try {
-      final translated = await service
-          .translate(text: text, sourceLanguage: 'en', targetLanguage: 'zh')
-          .timeout(translateTimeout);
-      if (!ref.mounted || session != _session) return;
+      if (!_isCurrent(session)) return;
+      if (service is AppleTranslationService) {
+        await service.prepare(
+          requestId: requestId!,
+          sourceLanguage: 'en',
+          targetLanguage: 'zh',
+        );
+        if (!_isCurrent(session)) {
+          // 取消可能早于准备完成；再次清理晚到的宿主，不能触及新请求。
+          unawaited(_cancelApple(service, requestId));
+          return;
+        }
+        state = state.copyWith(stage: ScreenshotStage.translating);
+      }
+      if (!_isCurrent(session)) return;
+      // 系统语言包准备不计入翻译的 30 秒上限。
+      final translated =
+          await (service is AppleTranslationService
+                  ? service.translate(
+                      text: text,
+                      sourceLanguage: 'en',
+                      targetLanguage: 'zh',
+                      requestId: requestId,
+                    )
+                  : service.translate(
+                      text: text,
+                      sourceLanguage: 'en',
+                      targetLanguage: 'zh',
+                    ))
+              .timeout(translateTimeout);
+      if (!_isCurrent(session)) return;
       state = state.copyWith(
         stage: ScreenshotStage.done,
         translatedText: translated,
       );
       await _saveHistory(session, service.engineId);
+    } on AppleTranslationException catch (error) {
+      if (!_isCurrent(session)) return;
+      if (error.isCancelled) {
+        unawaited(_invalidate());
+        state = ScreenshotState.idle;
+      } else {
+        _fail(ScreenshotFailure.apple, session, appleErrorCode: error.code);
+      }
     } on BaiduConfigException {
       _fail(ScreenshotFailure.missingCredentials, session);
     } on TimeoutException {
+      if (service is AppleTranslationService && requestId != null) {
+        unawaited(_cancelApple(service, requestId));
+      }
       _fail(ScreenshotFailure.timeout, session);
     } catch (_) {
       _fail(ScreenshotFailure.translationFailed, session);
+    } finally {
+      if (_appleRequestId == requestId) _appleRequestId = null;
     }
   }
 
   Future<void> _saveHistory(int session, String engine) async {
+    if (!_isCurrent(session)) return;
     final record = TranslationRecord(
       sourceText: state.recognizedText ?? '',
       translatedText: state.translatedText ?? '',
@@ -290,20 +359,55 @@ class ScreenshotController extends Notifier<ScreenshotState> {
     }
   }
 
-  // 关闭结果页：取消进行中的捕获并释放截图内存。
+  // 关闭立即回 idle；异步取消完成不得覆盖随后启动的新截图。
   Future<void> dismiss() async {
-    _session++;
-    _fixedService = null;
-    try {
-      await ref
-          .read(macosDesktopServiceProvider)
-          .cancelCapture('shot-$_session');
-    } catch (_) {}
-    state = ScreenshotState.idle;
+    final cancellation = _invalidate();
+    if (ref.mounted) state = ScreenshotState.idle;
+    await cancellation;
   }
 
-  void _fail(ScreenshotFailure failure, int session) {
-    if (!ref.mounted || session != _session) return;
-    state = state.copyWith(stage: ScreenshotStage.failed, failure: failure);
+  bool _isCurrent(int session) => ref.mounted && session == _session;
+
+  // 先清空所有权和会话序号，再异步取消各自的原生请求。
+  Future<void> _invalidate() async {
+    _session++;
+    final desktop = _desktop;
+    final captureId = _captureRequestId;
+    final service = _fixedService;
+    final appleId = _appleRequestId;
+    _captureRequestId = null;
+    _appleRequestId = null;
+    _fixedService = null;
+    await Future.wait([
+      if (desktop != null && captureId != null)
+        _cancelCapture(desktop, captureId),
+      if (service is AppleTranslationService && appleId != null)
+        _cancelApple(service, appleId),
+    ]);
+  }
+
+  Future<void> _cancelCapture(MacosDesktopService desktop, String id) async {
+    try {
+      await desktop.cancelCapture(id);
+    } catch (_) {
+      // 通道清理失败不改变会话状态。
+    }
+  }
+
+  Future<void> _cancelApple(AppleTranslationService service, String id) async {
+    try {
+      await service.cancel(id);
+    } catch (_) {
+      // 清理失败不得覆盖译文、原始错误或下一次请求。
+    }
+  }
+
+  void _fail(ScreenshotFailure failure, int session, {String? appleErrorCode}) {
+    if (!_isCurrent(session)) return;
+    state = state.copyWith(
+      stage: ScreenshotStage.failed,
+      failure: failure,
+      appleErrorCode: appleErrorCode,
+    );
   }
 }

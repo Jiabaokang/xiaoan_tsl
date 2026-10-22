@@ -3,6 +3,7 @@ import Cocoa
 // 原位覆盖面板的显示阶段；与 Dart 侧 ScreenshotStage 对齐。
 enum OverlayStage {
   case loading(String)     // OCR 或翻译进行中，附带提示文字
+  case preparingTranslation // 等待苹果系统准备语言包
   case needsConfirm        // 语言不确定，等待用户确认
   case done                // 译文已就绪
   case failed(String)      // 出错，附带错误描述
@@ -43,6 +44,7 @@ final class OverlayResultView: NSView {
 
   // 自动关闭计时器：3 分钟无操作后淡出。
   private var autoDismissTimer: Timer?
+  private var dismissGeneration = 0
   private static let autoDismissInterval: TimeInterval = 180
 
   // 当前快照。
@@ -77,6 +79,10 @@ final class OverlayResultView: NSView {
     fatalError("init(coder:) 未实现")
   }
 
+  private static func localized(_ chinese: String, _ english: String) -> String {
+    Locale.preferredLanguages.first?.hasPrefix("zh") == true ? chinese : english
+  }
+
   // MARK: - 视图搭建
 
   // 构建内容标签、加载指示器、状态文字和底部工具条。
@@ -104,24 +110,26 @@ final class OverlayResultView: NSView {
     statusLabel.font = .systemFont(ofSize: 12)
     statusLabel.textColor = .secondaryLabelColor
     statusLabel.alignment = .center
+    statusLabel.maximumNumberOfLines = 0
+    statusLabel.lineBreakMode = .byWordWrapping
     addSubview(statusLabel)
 
     // 历史保存失败提示。
     historyWarningLabel.translatesAutoresizingMaskIntoConstraints = false
     historyWarningLabel.font = .systemFont(ofSize: 11)
     historyWarningLabel.textColor = .systemOrange
-    historyWarningLabel.stringValue = "历史记录保存失败"
+    historyWarningLabel.stringValue = Self.localized("历史记录保存失败", "History could not be saved")
     historyWarningLabel.isHidden = true
     addSubview(historyWarningLabel)
 
     // 工具条按钮。
-    setupButton(copyButton, title: "复制", image: NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: "复制"))
-    setupButton(peekButton, title: "原文", image: NSImage(systemSymbolName: "eye", accessibilityDescription: "原文"))
-    setupButton(reshootButton, title: "重截", image: NSImage(systemSymbolName: "crop", accessibilityDescription: "重截"))
-    setupButton(closeButton, title: "", image: NSImage(systemSymbolName: "xmark", accessibilityDescription: "关闭"))
-    setupButton(confirmButton, title: "按英文翻译", image: NSImage(systemSymbolName: "checkmark.circle", accessibilityDescription: "确认"))
-    setupButton(retryButton, title: "重试", image: NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: "重试"))
-    setupButton(configureButton, title: "去设置", image: NSImage(systemSymbolName: "gear", accessibilityDescription: "设置"))
+    setupButton(copyButton, title: Self.localized("复制", "Copy"), image: NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: Self.localized("复制", "Copy")))
+    setupButton(peekButton, title: Self.localized("原文", "Original"), image: NSImage(systemSymbolName: "eye", accessibilityDescription: Self.localized("原文", "Original")))
+    setupButton(reshootButton, title: Self.localized("重截", "Reshoot"), image: NSImage(systemSymbolName: "crop", accessibilityDescription: Self.localized("重截", "Reshoot")))
+    setupButton(closeButton, title: "", image: NSImage(systemSymbolName: "xmark", accessibilityDescription: Self.localized("关闭", "Close")))
+    setupButton(confirmButton, title: Self.localized("按英文翻译", "Translate as English"), image: NSImage(systemSymbolName: "checkmark.circle", accessibilityDescription: Self.localized("确认", "Confirm")))
+    setupButton(retryButton, title: Self.localized("重试", "Retry"), image: NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: Self.localized("重试", "Retry")))
+    setupButton(configureButton, title: Self.localized("去设置", "Settings"), image: NSImage(systemSymbolName: "gear", accessibilityDescription: Self.localized("设置", "Settings")))
 
     copyButton.target = self
     copyButton.action = #selector(copyTapped)
@@ -212,6 +220,16 @@ final class OverlayResultView: NSView {
       spinnerView.startAnimation(nil)
       statusLabel.isHidden = false
       statusLabel.stringValue = hint
+
+    case .preparingTranslation:
+      contentLabel.isHidden = true
+      spinnerView.isHidden = false
+      spinnerView.startAnimation(nil)
+      statusLabel.isHidden = false
+      statusLabel.stringValue = Self.localized("正在准备苹果离线翻译，请完成系统提示",
+        "Preparing Apple offline translation. Please complete the system prompt.")
+      toolbarView.addArrangedSubview(reshootButton)
+      toolbarView.addArrangedSubview(closeButton)
 
     case .needsConfirm:
       spinnerView.stopAnimation(nil)
@@ -339,7 +357,11 @@ final class OverlayResultView: NSView {
 
   // 重置 3 分钟自动关闭计时器。
   private func resetAutoDismiss() {
+    dismissGeneration += 1
     autoDismissTimer?.invalidate()
+    autoDismissTimer = nil
+    hostPanel?.alphaValue = 1
+    if case .preparingTranslation = snapshot?.stage { return }
     autoDismissTimer = Timer.scheduledTimer(withTimeInterval: Self.autoDismissInterval, repeats: false) { [weak self] _ in
       self?.fadeOutAndDismiss()
     }
@@ -347,11 +369,13 @@ final class OverlayResultView: NSView {
 
   // 淡出动画后关闭面板。
   private func fadeOutAndDismiss() {
+    let generation = dismissGeneration
     NSAnimationContext.runAnimationGroup({ context in
       context.duration = 0.3
       hostPanel?.animator().alphaValue = 0
     }, completionHandler: { [weak self] in
-      self?.onAction?(.dismiss)
+      guard let self, generation == self.dismissGeneration else { return }
+      self.onAction?(.dismiss)
     })
   }
 
@@ -434,6 +458,9 @@ final class OverlayResultView: NSView {
 // 原位结果面板：无边框透明 NSPanel，定位在截图选区精确位置。
 // 点击面板外区域或按 Esc 关闭。
 final class OverlayResultPanel: NSPanel {
+  // 系统翻译宿主的归属由协调器判定；子 sheet 与父窗口共用此路径。
+  var isTranslationWindow: (NSWindow?) -> Bool = { AppleTranslationBridge.shared.owns($0) }
+
   // 点击面板外区域的全局监听。
   private var clickOutsideMonitor: Any?
 
@@ -441,16 +468,21 @@ final class OverlayResultPanel: NSPanel {
 
   // 安装面板外点击监听；任何面板外的鼠标按下都会触发关闭。
   func installClickOutsideMonitor(action: @escaping () -> Void) {
+    removeClickOutsideMonitor()
     clickOutsideMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
-      guard let self, let contentView = self.contentView else { return event }
-      let locationInWindow = event.locationInWindow
-      let locationInView = contentView.convert(locationInWindow, from: nil)
-      if event.window !== self || !contentView.bounds.contains(locationInView) {
+      guard let self else { return event }
+      if self.shouldDismiss(for: event) {
         action()
         return nil
       }
       return event
     }
+  }
+
+  func shouldDismiss(for event: NSEvent) -> Bool {
+    guard let contentView, !isTranslationWindow(event.window) else { return false }
+    let location = contentView.convert(event.locationInWindow, from: nil)
+    return event.window !== self || !contentView.bounds.contains(location)
   }
 
   // 移除监听器。

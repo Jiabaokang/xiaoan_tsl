@@ -9,6 +9,7 @@ import 'package:xiaoan_tsl/features/translate/app_controller.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
 import 'package:xiaoan_tsl/features/language/model_download_progress.dart';
 import 'package:xiaoan_tsl/services/translation/model_download_controller.dart';
+import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
 import 'package:xiaoan_tsl/services/sharing/sharing_service.dart';
 import 'package:xiaoan_tsl/services/speech/speech_service_provider.dart';
 import 'package:xiaoan_tsl/services/speech/tts_service.dart';
@@ -360,6 +361,16 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                 minimumSize: const Size.fromHeight(51),
               ),
             ),
+            if (state.phase.isBusy &&
+                ref.watch(translationServiceProvider).engineId == 'apple')
+              TextButton.icon(
+                onPressed: () {
+                  _translationTimer?.cancel();
+                  controller.cancelTranslation();
+                },
+                icon: const Icon(Icons.close),
+                label: Text(l10n.cancel),
+              ),
             if ((state.phase == TranslationPhase.downloadingModel ||
                     state.failure == TranslationFailure.modelDownload) &&
                 state.downloadingModelCode != null)
@@ -420,9 +431,12 @@ class _TranslationHomePageState extends ConsumerState<TranslationHomePage> {
                           l10n.translationResultLabel,
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                        Text(
-                          state.localizedMessage(l10n),
-                          style: theme.textTheme.labelSmall,
+                        Flexible(
+                          child: Text(
+                            state.localizedMessage(l10n),
+                            textAlign: TextAlign.end,
+                            style: theme.textTheme.labelSmall,
+                          ),
                         ),
                       ],
                     ),

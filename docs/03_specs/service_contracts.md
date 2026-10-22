@@ -10,7 +10,10 @@
 ### 1.1 翻译服务契约 (`TranslationService`)
 ```dart
 abstract class TranslationService {
-  /// 执行离线文本翻译
+  String get engineId;
+  bool get requiresMlKitModels;
+
+  /// 使用选定引擎翻译；失败不能自动转到其他服务
   ///
   /// [text] 待翻译源文本 (已校验非空且在长度范围内)
   /// [sourceLanguage] 标准源语言代码 (如 'zh', 'en')
@@ -24,6 +27,14 @@ abstract class TranslationService {
   });
 }
 ```
+
+macOS 默认仍为 `baidu`；显式保存 `apple` 时解析为 `AppleTranslationService`，即使能力查询失败也不自动改选或上传百度。非 macOS 的遗留 apple 配置按原平台默认处理。
+
+苹果服务复用 `xiaoan_tsl/macos_desktop`：`appleTranslationAvailability` 查询实际语言对，`prepareAppleTranslation` 以唯一 `requestId` 准备系统语言包，`translateText` 消费同一请求，`cancelAppleTranslation` 只取消匹配 ID。能力区分 `platformUnsupported`、`unsupported`、`supported`、`installed`，不持久化语言包状态。`supported` 允许选择，选择服务本身不触发下载。
+
+`AppleTranslationService.translate` 在既有必填参数之外接受可选 `requestId`；不传时自行准备，传入时消费已准备会话。两个业务控制器显式准备，以呈现准备阶段；通用 `TranslationService` 接口不增加苹果参数。`AppleTranslationException.code` 由中英文本地化出口映射，取消回 idle、保留输入且不保存成功历史。完整参数、错误码和超时契约见[苹果接入开发文档](../superpowers/plans/20261020151615_macOS苹果离线翻译接入开发文档.md#4-dart--原生接口契约)。
+
+最低系统保持 macOS 14，苹果 API 经运行时检查仅在 15+ 创建。系统 SwiftUI 宿主中的同一 `translationTask` 先准备、再等待并执行翻译；准备上限 10 分钟，准备后的闲置和实际翻译各限 30 秒。`zh` 只映射系统报告支持的简体中文；文本长度统一按 5000 个 UTF-16 单元校验。
 
 ### 1.2 语言识别契约 (`LanguageDetectionService`)
 ```dart

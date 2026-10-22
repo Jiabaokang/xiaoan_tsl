@@ -158,6 +158,7 @@ void main() {
     ];
     await tester.pumpWidget(
       ProviderScope(
+        key: UniqueKey(),
         overrides: overrides,
         child: MaterialApp(
           locale: locale,
@@ -384,5 +385,74 @@ void main() {
     final state = container.read(screenshotControllerProvider);
     expect(state.stage, ScreenshotStage.idle);
     expect(state.pngBytes, isNull);
+  });
+
+  testWidgets('苹果准备在中英文、浅深色下显示等待系统提示并可 Esc 取消', (tester) async {
+    for (final locale in [const Locale('zh'), const Locale('en')]) {
+      for (final theme in [ThemeMode.light, ThemeMode.dark]) {
+        final container = await pumpPage(
+          tester,
+          state: const ScreenshotState(
+            stage: ScreenshotStage.preparingTranslation,
+            recognizedText: 'hello world',
+          ),
+          locale: locale,
+          themeMode: theme,
+        );
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(ScreenshotResultPage)),
+        );
+        expect(find.text(l10n.phasePreparingAppleTranslation), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        expect(find.text('hello world'), findsOneWidget);
+        expect(find.byKey(const Key('screenshotGoConfigButton')), findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await settle(tester);
+        expect(
+          container.read(screenshotControllerProvider).stage,
+          ScreenshotStage.idle,
+        );
+      }
+    }
+  });
+
+  testWidgets('苹果错误按代码本地化并提供重试，不显示百度配置入口', (tester) async {
+    for (final locale in [const Locale('zh'), const Locale('en')]) {
+      for (final theme in [ThemeMode.light, ThemeMode.dark]) {
+        for (final code in [
+          'appleUnsupportedLanguage',
+          'applePreparationFailed',
+          'applePreparationTimeout',
+          'appleBusy',
+          'appleTimeout',
+        ]) {
+          await pumpPage(
+            tester,
+            state: ScreenshotState(
+              stage: ScreenshotStage.failed,
+              failure: ScreenshotFailure.apple,
+              appleErrorCode: code,
+              recognizedText: 'hello world',
+            ),
+            locale: locale,
+            themeMode: theme,
+          );
+          final l10n = AppLocalizations.of(
+            tester.element(find.byType(ScreenshotResultPage)),
+          );
+          expect(find.text(l10n.appleTranslationError(code)), findsOneWidget);
+          expect(
+            find.byKey(const Key('screenshotRetryButton')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(const Key('screenshotGoConfigButton')),
+            findsNothing,
+          );
+          expect(tester.takeException(), isNull);
+        }
+      }
+    }
   });
 }

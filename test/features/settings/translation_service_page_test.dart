@@ -16,6 +16,7 @@ import 'package:xiaoan_tsl/core/network/dio_provider.dart';
 import 'package:xiaoan_tsl/core/theme/app_theme.dart';
 import 'package:xiaoan_tsl/features/settings/translation_service_page.dart';
 import 'package:xiaoan_tsl/l10n/app_localizations.dart';
+import 'package:xiaoan_tsl/services/translation/apple_translation_service.dart';
 import 'package:xiaoan_tsl/services/translation/translation_service_provider.dart';
 import 'package:xiaoan_tsl/services/translation/translation_settings.dart';
 
@@ -117,6 +118,50 @@ class _ErrorAdapter implements HttpClientAdapter {
 }
 
 void main() {
+  test(
+    'shared Apple preparation and error text is localized without exposing raw codes',
+    () {
+      for (final l10n in [
+        const AppLocalizationsZh(),
+        const AppLocalizationsEn(),
+      ]) {
+        expect(
+          l10n.phasePreparingAppleTranslation,
+          contains(l10n is AppLocalizationsZh ? '系统提示' : 'system prompts'),
+        );
+        for (final code in [
+          'appleUnsupported',
+          'appleUnsupportedLanguage',
+          'appleCancelled',
+          'applePreparationFailed',
+          'applePreparationTimeout',
+          'appleBusy',
+          'appleTimeout',
+          'appleInvalidArguments',
+          'appleInvalidRequest',
+          'appleTranslationFailed',
+          'unknown',
+        ]) {
+          final message = l10n.appleTranslationError(code);
+          expect(message, isNotEmpty);
+          expect(message, isNot(contains(code)));
+          expect(
+            message,
+            isNot(contains(l10n is AppLocalizationsZh ? '百度' : 'Baidu')),
+          );
+        }
+        expect(
+          l10n.appleTranslationError('applePreparationFailed'),
+          isNot(l10n.appleTranslationError('appleTranslationFailed')),
+        );
+        expect(
+          l10n.appleTranslationError('appleTimeout'),
+          isNot(l10n.appleTranslationError('applePreparationTimeout')),
+        );
+      }
+    },
+  );
+
   setUpAll(sqfliteFfiInit);
 
   late Directory directory;
@@ -152,6 +197,7 @@ void main() {
     Dio? dio,
     Locale locale = const Locale('zh'),
     ThemeMode themeMode = ThemeMode.light,
+    Future<AppleTranslationAvailability> Function()? availability,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -160,6 +206,10 @@ void main() {
           translationPlatformProvider.overrideWithValue(platform),
           secureCredentialStoreProvider.overrideWithValue(credentials),
           dioProvider.overrideWithValue(dio ?? Dio()),
+          if (availability != null)
+            appleTranslationAvailabilityProvider.overrideWith(
+              (_) => availability(),
+            ),
         ],
         child: MaterialApp(
           locale: locale,
@@ -181,17 +231,17 @@ void main() {
     await settle(tester);
   }
 
-  testWidgets('移动端显示 ML Kit 与百度，苹果服务禁用', (tester) async {
-    await pumpPage(tester, platform: TranslationPlatform.android);
-    expect(find.text('设备端离线翻译（ML Kit）'), findsOneWidget);
-    expect(find.text('百度在线翻译'), findsOneWidget);
-    final apple = tester.widget<RadioListTile<String>>(
-      find.byWidgetPredicate(
-        (widget) => widget is RadioListTile<String> && widget.value == 'apple',
-      ),
-    );
-    expect(apple.enabled, isFalse);
-  });
+  for (final platform in [
+    TranslationPlatform.android,
+    TranslationPlatform.ios,
+  ]) {
+    testWidgets('$platform 只显示 ML Kit 与百度，不显示苹果服务', (tester) async {
+      await pumpPage(tester, platform: platform);
+      expect(find.text('设备端离线翻译（ML Kit）'), findsOneWidget);
+      expect(find.text('百度在线翻译'), findsOneWidget);
+      expect(find.text('苹果离线翻译（macOS 15+）'), findsNothing);
+    });
+  }
 
   testWidgets('macOS 不显示 ML Kit，快捷键入口移至设置主页', (tester) async {
     await pumpPage(tester, platform: TranslationPlatform.macOS);
@@ -350,4 +400,220 @@ void main() {
     expect(find.text('Screenshot Shortcut'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  Finder appleTile() => find.byWidgetPredicate(
+    (widget) => widget is RadioListTile<String> && widget.value == 'apple',
+  );
+
+  testWidgets('macOS 14 shows version reason and keeps saved apple', (
+    tester,
+  ) async {
+    await tester.runAsync(
+      () => store.setSetting(TranslationSettingKeys.engine, 'apple'),
+    );
+    await pumpPage(
+      tester,
+      platform: TranslationPlatform.macOS,
+      availability: () async =>
+          AppleTranslationAvailability.platformUnsupported,
+    );
+    expect(tester.widget<RadioListTile<String>>(appleTile()).enabled, isFalse);
+    expect(find.text('需要 macOS 15 或更新版本'), findsOneWidget);
+    expect(
+      await tester.runAsync(
+        () => store.getSetting(TranslationSettingKeys.engine),
+      ),
+      'apple',
+    );
+    expect(find.byKey(const Key('baiduAppIdField')), findsNothing);
+  });
+
+  testWidgets(
+    'apple availability loading disables selection without changing default',
+    (tester) async {
+      final completer = Completer<AppleTranslationAvailability>();
+      await pumpPage(
+        tester,
+        platform: TranslationPlatform.macOS,
+        availability: () => completer.future,
+      );
+      expect(find.text('正在检查苹果翻译可用性…'), findsOneWidget);
+      expect(
+        tester.widget<RadioListTile<String>>(appleTile()).enabled,
+        isFalse,
+      );
+      expect(
+        await tester.runAsync(
+          () => store.getSetting(TranslationSettingKeys.engine),
+        ),
+        isNull,
+      );
+      completer.complete(AppleTranslationAvailability.supported);
+      await settle(tester);
+      expect(tester.widget<RadioListTile<String>>(appleTile()).enabled, isTrue);
+    },
+  );
+
+  testWidgets('unsupported language pair is disabled with its own reason', (
+    tester,
+  ) async {
+    await pumpPage(
+      tester,
+      platform: TranslationPlatform.macOS,
+      availability: () async => AppleTranslationAvailability.unsupported,
+    );
+    expect(tester.widget<RadioListTile<String>>(appleTile()).enabled, isFalse);
+    expect(find.text('此设备暂不支持英文与简体中文离线翻译'), findsOneWidget);
+    expect(find.text('需要 macOS 15 或更新版本'), findsNothing);
+  });
+
+  testWidgets('availability failure retries and preserves saved apple', (
+    tester,
+  ) async {
+    var checks = 0;
+    await tester.runAsync(
+      () => store.setSetting(TranslationSettingKeys.engine, 'apple'),
+    );
+    await pumpPage(
+      tester,
+      platform: TranslationPlatform.macOS,
+      availability: () async {
+        if (++checks == 1) {
+          throw const AppleTranslationException('appleTranslationFailed');
+        }
+        return AppleTranslationAvailability.installed;
+      },
+    );
+    expect(find.text('无法检查苹果翻译，请重试'), findsOneWidget);
+    expect(find.text('需要 macOS 15 或更新版本'), findsNothing);
+    expect(tester.widget<RadioListTile<String>>(appleTile()).enabled, isFalse);
+    expect(
+      await tester.runAsync(
+        () => store.getSetting(TranslationSettingKeys.engine),
+      ),
+      'apple',
+    );
+    await tester.tap(find.byKey(const Key('retryAppleAvailability')));
+    await settle(tester);
+    expect(tester.widget<RadioListTile<String>>(appleTile()).enabled, isTrue);
+    expect(find.text('系统语言包已安装'), findsOneWidget);
+    expect(find.byKey(const Key('retryAppleAvailability')), findsNothing);
+    expect(checks, 2);
+  });
+
+  testWidgets('mobile settings never invoke macOS channel', (tester) async {
+    const channel = MethodChannel('xiaoan_tsl/macos_desktop');
+    final calls = <MethodCall>[];
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      throw PlatformException(code: 'unexpectedChannelCall');
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+    await pumpPage(tester, platform: TranslationPlatform.android);
+    expect(appleTile(), findsNothing);
+    expect(calls, isEmpty);
+  });
+
+  for (final status in [
+    AppleTranslationAvailability.supported,
+    AppleTranslationAvailability.installed,
+  ]) {
+    testWidgets(
+      '$status selection persists apple, hides Baidu, retains credentials, never prepares',
+      (tester) async {
+        await credentials.writeBaiduCredentials(
+          appId: 'kept-id',
+          secret: 'kept-secret',
+        );
+        const channel = MethodChannel('xiaoan_tsl/macos_desktop');
+        final calls = <MethodCall>[];
+        final messenger =
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          calls.add(call);
+          return {'status': status.name};
+        });
+        addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+        await pumpPage(tester, platform: TranslationPlatform.macOS);
+        expect(
+          tester.widget<RadioListTile<String>>(appleTile()).enabled,
+          isTrue,
+        );
+        await tester.tap(appleTile());
+        await settle(tester);
+        expect(
+          await tester.runAsync(
+            () => store.getSetting(TranslationSettingKeys.engine),
+          ),
+          'apple',
+        );
+        expect(find.byKey(const Key('baiduAppIdField')), findsNothing);
+        expect(find.byKey(const Key('baiduSecretField')), findsNothing);
+        expect(find.byKey(const Key('testConnectionButton')), findsNothing);
+        expect(find.text('首次准备需要联网下载语言包；翻译在设备端进行，语言包由系统管理。'), findsOneWidget);
+        expect(await credentials.readBaiduAppId(), 'kept-id');
+        expect(await credentials.readBaiduSecret(), 'kept-secret');
+        expect(
+          calls.every((call) => call.method == 'appleTranslationAvailability'),
+          isTrue,
+        );
+        await tester.pumpWidget(const SizedBox());
+        await pumpPage(tester, platform: TranslationPlatform.macOS);
+        expect(
+          ProviderScope.containerOf(
+            tester.element(appleTile()),
+          ).read(translationEngineProvider),
+          'apple',
+        );
+        expect(find.byKey(const Key('baiduAppIdField')), findsNothing);
+        await tester.tap(find.text('百度在线翻译'));
+        await settle(tester);
+        expect(find.byKey(const Key('baiduAppIdField')), findsOneWidget);
+        expect(await credentials.hasBaiduCredentials(), isTrue);
+      },
+    );
+  }
+
+  for (final language in ['zh', 'en']) {
+    for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+      testWidgets(
+        'apple $language $mode renders localized status and offline notice',
+        (tester) async {
+          await tester.runAsync(
+            () => store.setSetting(TranslationSettingKeys.engine, 'apple'),
+          );
+          await pumpPage(
+            tester,
+            platform: TranslationPlatform.macOS,
+            locale: Locale(language),
+            themeMode: mode,
+            availability: () async => AppleTranslationAvailability.supported,
+          );
+          expect(
+            find.text(
+              language == 'zh'
+                  ? '支持，准备时由系统确认下载语言包'
+                  : 'Supported; macOS will ask before downloading language packs',
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              language == 'zh'
+                  ? '首次准备需要联网下载语言包；翻译在设备端进行，语言包由系统管理。'
+                  : 'The first preparation needs internet access to download language packs. Translation runs on-device; macOS manages the packs.',
+            ),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+          expect(
+            Theme.of(tester.element(appleTile())).brightness,
+            mode == ThemeMode.dark ? Brightness.dark : Brightness.light,
+          );
+        },
+      );
+    }
+  }
 }
